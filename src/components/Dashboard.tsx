@@ -67,7 +67,7 @@ const Dashboard = () => {
                   <span className="sr-only">Home</span>
                 </Link>
                 <div>
-                  <h1 className="text-3xl font-bold text-white">Welcomasde Back!</h1>
+                  <h1 className="text-3xl font-bold text-white">Welcome Back!</h1>
                   <p className="text-blue-200">Everyday Living Assistant - ELA</p>
                 </div>
               </div>
