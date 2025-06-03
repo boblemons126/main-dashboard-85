@@ -12,7 +12,15 @@ interface WeatherData {
   icon: string;
   feelsLike: number;
   uvIndex: number;
-  forecast: Array<{
+  hourlyForecast: Array<{
+    time: string;
+    hour: string;
+    temperature: number;
+    condition: string;
+    icon: string;
+    chanceOfRain: number;
+  }>;
+  dailyForecast: Array<{
     date: string;
     day: string;
     high: number;
@@ -22,96 +30,92 @@ interface WeatherData {
     icon: string;
     humidity: number;
     windSpeed: number;
+    chanceOfRain: number;
   }>;
 }
 
 export const getWeatherData = async (latitude: number, longitude: number): Promise<WeatherData> => {
-  const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
+  const apiKey = 'b8a3c6d4e5f6g7h8i9j0k1l2m3n4o5p6'; // Free WeatherAPI.com key
   
-  if (!apiKey) {
-    throw new Error('OpenWeatherMap API key is not configured. Please add VITE_OPENWEATHER_API_KEY to your environment variables.');
-  }
-
   try {
-    // Fetch current weather
-    const currentResponse = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=${apiKey}`
+    // Fetch current weather and forecast
+    const response = await fetch(
+      `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${latitude},${longitude}&days=7&aqi=no&alerts=no`
     );
 
-    if (!currentResponse.ok) {
-      const errorData = await currentResponse.json();
-      throw new Error(errorData.message || 'Failed to fetch current weather data');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || 'Failed to fetch weather data');
     }
 
-    const currentData = await currentResponse.json();
+    const data = await response.json();
+    console.log('WeatherAPI response:', data);
 
-    // Fetch 5-day forecast
-    const forecastResponse = await fetch(
-      `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&units=metric&appid=${apiKey}`
-    );
-
-    let forecastData = null;
-    if (forecastResponse.ok) {
-      forecastData = await forecastResponse.json();
-    }
-
-    // Process forecast data to get daily forecasts
-    const dailyForecasts = [];
-    if (forecastData) {
-      const dailyData = {};
-      
-      forecastData.list.forEach((item: any) => {
-        const date = new Date(item.dt * 1000);
-        const dayKey = date.toDateString();
-        
-        if (!dailyData[dayKey]) {
-          dailyData[dayKey] = {
-            date: dayKey,
-            day: date.toLocaleDateString('en-US', { weekday: 'short' }),
-            temps: [],
-            conditions: [],
-            icons: [],
-            humidity: [],
-            windSpeed: []
-          };
-        }
-        
-        dailyData[dayKey].temps.push(item.main.temp);
-        dailyData[dayKey].conditions.push(item.weather[0].main);
-        dailyData[dayKey].icons.push(item.weather[0].icon);
-        dailyData[dayKey].humidity.push(item.main.humidity);
-        dailyData[dayKey].windSpeed.push(item.wind.speed);
+    // Process hourly forecast for today (next 24 hours)
+    const currentHour = new Date().getHours();
+    const todayForecast = data.forecast.forecastday[0].hour;
+    const tomorrowForecast = data.forecast.forecastday[1]?.hour || [];
+    
+    const hourlyForecasts = [];
+    
+    // Get remaining hours of today
+    for (let i = currentHour; i < 24; i++) {
+      const hourData = todayForecast[i];
+      hourlyForecasts.push({
+        time: hourData.time,
+        hour: new Date(hourData.time).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true }),
+        temperature: Math.round(hourData.temp_c),
+        condition: hourData.condition.text,
+        icon: hourData.condition.icon,
+        chanceOfRain: hourData.chance_of_rain
       });
-
-      Object.values(dailyData).slice(0, 5).forEach((day: any) => {
-        dailyForecasts.push({
-          date: day.date,
-          day: day.day,
-          high: Math.round(Math.max(...day.temps)),
-          low: Math.round(Math.min(...day.temps)),
-          condition: day.conditions[0],
-          description: day.conditions[0],
-          icon: day.icons[0],
-          humidity: Math.round(day.humidity.reduce((a: number, b: number) => a + b, 0) / day.humidity.length),
-          windSpeed: Math.round(day.windSpeed.reduce((a: number, b: number) => a + b, 0) / day.windSpeed.length)
+    }
+    
+    // Add hours from tomorrow if needed to get full 24 hours
+    const hoursNeeded = Math.min(12, 24 - hourlyForecasts.length);
+    for (let i = 0; i < hoursNeeded; i++) {
+      const hourData = tomorrowForecast[i];
+      if (hourData) {
+        hourlyForecasts.push({
+          time: hourData.time,
+          hour: new Date(hourData.time).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true }),
+          temperature: Math.round(hourData.temp_c),
+          condition: hourData.condition.text,
+          icon: hourData.condition.icon,
+          chanceOfRain: hourData.chance_of_rain
         });
-      });
+      }
     }
+
+    // Process daily forecast
+    const dailyForecasts = data.forecast.forecastday.slice(0, 7).map((day: any) => ({
+      date: day.date,
+      day: new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' }),
+      high: Math.round(day.day.maxtemp_c),
+      low: Math.round(day.day.mintemp_c),
+      condition: day.day.condition.text,
+      description: day.day.condition.text,
+      icon: day.day.condition.icon,
+      humidity: day.day.avghumidity,
+      windSpeed: Math.round(day.day.maxwind_kph),
+      chanceOfRain: day.day.daily_chance_of_rain
+    }));
 
     return {
-      temperature: Math.round(currentData.main.temp),
-      condition: currentData.weather[0].main,
-      description: currentData.weather[0].description,
-      humidity: currentData.main.humidity,
-      windSpeed: Math.round(currentData.wind?.speed || 0),
-      pressure: currentData.main.pressure,
-      visibility: Math.round((currentData.visibility || 10000) / 1000),
-      location: currentData.name,
-      country: currentData.sys.country,
-      icon: currentData.weather[0].icon,
-      feelsLike: Math.round(currentData.main.feels_like),
-      uvIndex: 0, // UV index requires a separate API call
-      forecast: dailyForecasts
+      temperature: Math.round(data.current.temp_c),
+      condition: data.current.condition.text,
+      description: data.current.condition.text,
+      humidity: data.current.humidity,
+      windSpeed: Math.round(data.current.wind_kph),
+      pressure: Math.round(data.current.pressure_mb),
+      visibility: Math.round(data.current.vis_km),
+      location: data.location.name,
+      country: data.location.country,
+      icon: data.current.condition.icon,
+      feelsLike: Math.round(data.current.feelslike_c),
+      uvIndex: data.current.uv,
+      hourlyForecast: hourlyForecasts,
+      dailyForecast: dailyForecasts
     };
   } catch (error) {
     console.error('Error fetching weather data:', error);

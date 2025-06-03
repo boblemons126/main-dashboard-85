@@ -12,7 +12,9 @@ import {
   CloudRain,
   CloudSnow,
   Zap,
-  RefreshCw
+  RefreshCw,
+  Clock,
+  Calendar
 } from 'lucide-react';
 import { getWeatherData } from '../services/weather';
 
@@ -29,7 +31,15 @@ interface WeatherData {
   icon: string;
   feelsLike: number;
   uvIndex: number;
-  forecast: Array<{
+  hourlyForecast: Array<{
+    time: string;
+    hour: string;
+    temperature: number;
+    condition: string;
+    icon: string;
+    chanceOfRain: number;
+  }>;
+  dailyForecast: Array<{
     date: string;
     day: string;
     high: number;
@@ -39,6 +49,7 @@ interface WeatherData {
     icon: string;
     humidity: number;
     windSpeed: number;
+    chanceOfRain: number;
   }>;
 }
 
@@ -47,46 +58,41 @@ const WeatherWidget = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [showHourly, setShowHourly] = useState(true);
 
   const getWeatherIcon = (condition: string, size: string = "w-8 h-8") => {
     const iconClass = `${size} text-white drop-shadow-md`;
     
-    switch (condition.toLowerCase()) {
-      case 'clear':
-      case 'sunny':
-        return <Sun className={iconClass} />;
-      case 'clouds':
-      case 'cloudy':
-        return <Cloud className={iconClass} />;
-      case 'rain':
-      case 'drizzle':
-        return <CloudRain className={iconClass} />;
-      case 'snow':
-        return <CloudSnow className={iconClass} />;
-      case 'thunderstorm':
-        return <Zap className={iconClass} />;
-      default:
-        return <Sun className={iconClass} />;
+    const conditionLower = condition.toLowerCase();
+    if (conditionLower.includes('clear') || conditionLower.includes('sunny')) {
+      return <Sun className={iconClass} />;
+    } else if (conditionLower.includes('cloud')) {
+      return <Cloud className={iconClass} />;
+    } else if (conditionLower.includes('rain') || conditionLower.includes('drizzle')) {
+      return <CloudRain className={iconClass} />;
+    } else if (conditionLower.includes('snow')) {
+      return <CloudSnow className={iconClass} />;
+    } else if (conditionLower.includes('thunder')) {
+      return <Zap className={iconClass} />;
+    } else {
+      return <Sun className={iconClass} />;
     }
   };
 
   const getGradientByCondition = (condition: string) => {
-    switch (condition.toLowerCase()) {
-      case 'clear':
-      case 'sunny':
-        return 'from-blue-400 via-blue-500 to-blue-600';
-      case 'clouds':
-      case 'cloudy':
-        return 'from-gray-400 via-gray-500 to-gray-600';
-      case 'rain':
-      case 'drizzle':
-        return 'from-blue-600 via-blue-700 to-blue-800';
-      case 'snow':
-        return 'from-blue-200 via-blue-300 to-blue-400';
-      case 'thunderstorm':
-        return 'from-gray-700 via-gray-800 to-gray-900';
-      default:
-        return 'from-blue-400 via-blue-500 to-blue-600';
+    const conditionLower = condition.toLowerCase();
+    if (conditionLower.includes('clear') || conditionLower.includes('sunny')) {
+      return 'from-blue-400 via-blue-500 to-blue-600';
+    } else if (conditionLower.includes('cloud')) {
+      return 'from-gray-400 via-gray-500 to-gray-600';
+    } else if (conditionLower.includes('rain') || conditionLower.includes('drizzle')) {
+      return 'from-blue-600 via-blue-700 to-blue-800';
+    } else if (conditionLower.includes('snow')) {
+      return 'from-blue-200 via-blue-300 to-blue-400';
+    } else if (conditionLower.includes('thunder')) {
+      return 'from-gray-700 via-gray-800 to-gray-900';
+    } else {
+      return 'from-blue-400 via-blue-500 to-blue-600';
     }
   };
 
@@ -95,7 +101,6 @@ const WeatherWidget = () => {
     setError(null);
     
     try {
-      // Get user's current position
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(
           resolve,
@@ -103,7 +108,7 @@ const WeatherWidget = () => {
           {
             timeout: 10000,
             enableHighAccuracy: true,
-            maximumAge: 300000 // 5 minutes
+            maximumAge: 300000
           }
         );
       });
@@ -138,7 +143,6 @@ const WeatherWidget = () => {
   useEffect(() => {
     fetchWeatherData();
     
-    // Refresh weather data every 10 minutes
     const interval = setInterval(fetchWeatherData, 600000);
     return () => clearInterval(interval);
   }, []);
@@ -240,13 +244,50 @@ const WeatherWidget = () => {
           </div>
         </div>
 
-        {/* 5-day forecast */}
-        {weather.forecast && weather.forecast.length > 0 && (
-          <div>
-            <div className="text-sm font-semibold mb-3 opacity-90">5-Day Forecast</div>
-            <div className="grid grid-cols-5 gap-2">
-              {weather.forecast.map((day, index) => (
-                <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-2 text-center">
+        {/* Forecast toggle */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm font-semibold opacity-90">
+            {showHourly ? 'Hourly Forecast' : 'Weekly Forecast'}
+          </div>
+          <div className="flex bg-white/15 backdrop-blur-sm rounded-lg p-1">
+            <button
+              onClick={() => setShowHourly(true)}
+              className={`flex items-center space-x-1 px-3 py-1 rounded text-xs transition-colors ${
+                showHourly ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
+              }`}
+            >
+              <Clock className="w-3 h-3" />
+              <span>Hourly</span>
+            </button>
+            <button
+              onClick={() => setShowHourly(false)}
+              className={`flex items-center space-x-1 px-3 py-1 rounded text-xs transition-colors ${
+                !showHourly ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
+              }`}
+            >
+              <Calendar className="w-3 h-3" />
+              <span>Daily</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Hourly/Daily forecast */}
+        <div className="overflow-x-auto">
+          <div className="flex space-x-3 pb-2">
+            {showHourly ? (
+              weather.hourlyForecast.slice(0, 8).map((hour, index) => (
+                <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
+                  <div className="text-xs opacity-80 mb-1">{hour.hour}</div>
+                  <div className="flex justify-center mb-1">
+                    {getWeatherIcon(hour.condition, "w-5 h-5")}
+                  </div>
+                  <div className="text-sm font-semibold mb-1">{hour.temperature}°</div>
+                  <div className="text-xs opacity-70">{hour.chanceOfRain}%</div>
+                </div>
+              ))
+            ) : (
+              weather.dailyForecast.slice(0, 7).map((day, index) => (
+                <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
                   <div className="text-xs opacity-80 mb-1">{day.day}</div>
                   <div className="flex justify-center mb-1">
                     {getWeatherIcon(day.condition, "w-5 h-5")}
@@ -255,11 +296,12 @@ const WeatherWidget = () => {
                     <div className="font-semibold">{day.high}°</div>
                     <div className="opacity-70">{day.low}°</div>
                   </div>
+                  <div className="text-xs opacity-70 mt-1">{day.chanceOfRain}%</div>
                 </div>
-              ))}
-            </div>
+              ))
+            )}
           </div>
-        )}
+        </div>
 
         {/* Last updated */}
         {lastUpdated && (
