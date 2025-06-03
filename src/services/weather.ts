@@ -8,7 +8,7 @@ interface WeatherData {
   pressure: number;
   visibility: number;
   location: string;
-  country: string;
+  county: string;
   icon: string;
   feelsLike: number;
   uvIndex: number;
@@ -60,11 +60,21 @@ const getLocationName = async (latitude: number, longitude: number): Promise<{ l
     const data = await response.json();
     // Prefer city, fallback to locality, then unknown
     const city = data.city || data.locality || 'Unknown Location';
-    // Use principalSubdivision for county (Devon, etc.)
-    const county = data.principalSubdivision || '';
-    const location = county ? `${city}, ${county}` : city;
+    
+    // Extract county from informative array (look for county/ceremonial county description)
+    let county = '';
+    if (data.localityInfo && data.localityInfo.informative) {
+      const countyInfo = data.localityInfo.informative.find((item: any) => 
+        item.description && (
+          item.description.includes('ceremonial county') || 
+          item.description.includes('county')
+        )
+      );
+      county = countyInfo ? countyInfo.name : '';
+    }
+    
     return {
-      location,
+      location: city,
       county
     };
   } catch (error) {
@@ -149,7 +159,7 @@ export const getWeatherData = async (latitude: number, longitude: number): Promi
       pressure: Math.round(current.pressure || 0),
       visibility: Math.round((current.visibility || 0) * 1.60934), // Convert miles to km
       location: locationInfo.location,
-      country: locationInfo.county,
+      county: locationInfo.county,
       icon: current.icon,
       feelsLike: Math.round(current.apparentTemperature),
       uvIndex: Math.round(current.uvIndex || 0),

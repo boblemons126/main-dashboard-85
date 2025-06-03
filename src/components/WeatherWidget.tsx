@@ -26,7 +26,7 @@ interface WeatherData {
   pressure: number;
   visibility: number;
   location: string;
-  country: string;
+  county: string;
   icon: string;
   feelsLike: number;
   uvIndex: number;
@@ -222,7 +222,12 @@ const WeatherWidget = () => {
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-start space-x-1 mt-1">
             <MapPin className="w-4 h-4 mt-0.5" />
-            <div className="font-semibold text-base leading-tight">{weather.location}</div>
+            <div>
+              <div className="font-semibold text-base leading-tight">{weather.location}</div>
+              {weather.county && (
+                <div className="text-sm opacity-70">{weather.county}</div>
+              )}
+            </div>
           </div>
           <button
             onClick={handleRefresh}
@@ -247,18 +252,21 @@ const WeatherWidget = () => {
 
         {/* Weather details */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
-            <Droplets className="w-5 h-5 mx-auto mb-1" />
+          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center flex flex-col items-center justify-center">
+            <Droplets className="w-5 h-5 mb-1" />
             <div className="text-xs opacity-80">Humidity</div>
             <div className="font-semibold">{weather.humidity}%</div>
           </div>
-          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
-            <Wind className="w-5 h-5 mx-auto mb-1" />
+          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center flex flex-col items-center justify-center">
+            <Wind className="w-5 h-5 mb-1" />
             <div className="text-xs opacity-80">Wind</div>
-            <div className="font-semibold">{weather.windSpeed} mph <span className="text-[0.7em] text-white/60 font-normal align-middle">{weather.windDirection}</span></div>
+            <div className="flex flex-col items-center justify-center" style={{ minHeight: '2.5em' }}>
+              <span className="font-semibold">{weather.windSpeed} mph</span>
+              <span className="text-[0.65em] text-white/60 font-normal leading-tight">{weather.windDirection}</span>
+            </div>
           </div>
-          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
-            <Sun className="w-5 h-5 mx-auto mb-1" />
+          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center flex flex-col items-center justify-center">
+            <Sun className="w-5 h-5 mb-1" />
             <div className="text-xs opacity-80">Sunset</div>
             <div className="font-semibold">{weather && weather.sunset ? weather.sunset : '--'}</div>
           </div>
