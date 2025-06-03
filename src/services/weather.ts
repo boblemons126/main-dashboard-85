@@ -53,34 +53,16 @@ const getConditionFromIcon = (icon: string): string => {
 
 const getLocationName = async (latitude: number, longitude: number): Promise<{ location: string; county: string }> => {
   try {
+    // Use a reverse geocoding service to get location name
     const response = await fetch(
       `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
     );
     const data = await response.json();
-    
-    // Get the city name
+    // Prefer city, fallback to locality, then unknown
     const city = data.city || data.locality || 'Unknown Location';
-    
-    // Get the county name
-    let county = '';
-    if (data.localityInfo && data.localityInfo.administrative) {
-      // Find the county level entry
-      const countyEntry = data.localityInfo.administrative.find((a: any) => 
-        a.adminLevel === 6 || // Standard county level
-        (a.name && 
-         !a.name.toLowerCase().includes('england') && 
-         !a.name.toLowerCase().includes('kingdom') &&
-         a.name.toLowerCase() !== city.toLowerCase())
-      );
-      
-      if (countyEntry && countyEntry.name) {
-        county = countyEntry.name;
-      }
-    }
-
-    // Format the location string as "City, County"
+    // Use principalSubdivision for county (Devon, etc.)
+    const county = data.principalSubdivision || '';
     const location = county ? `${city}, ${county}` : city;
-    
     return {
       location,
       county
