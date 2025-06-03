@@ -57,8 +57,15 @@ const getLocationName = async (latitude: number, longitude: number): Promise<{ l
       `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
     );
     const data = await response.json();
+    
+    const city = data.city || data.locality || 'Unknown Location';
+    const county = data.principalSubdivision || data.countrySubdivision || '';
+    
+    // Combine city and county if county exists
+    const locationWithCounty = county ? `${city}, ${county}` : city;
+    
     return {
-      location: data.city || data.locality || 'Unknown Location',
+      location: locationWithCounty,
       country: data.countryName || 'Unknown Country'
     };
   } catch (error) {
