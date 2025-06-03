@@ -260,10 +260,8 @@ const WeatherWidget = () => {
           <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center flex flex-col items-center justify-center">
             <Wind className="w-5 h-5 mb-1" />
             <div className="text-xs opacity-80">Wind</div>
-            <div className="flex flex-col items-center justify-center" style={{ minHeight: '2.5em' }}>
-              <span className="font-semibold">{weather.windSpeed} mph</span>
-              <span className="text-[0.65em] text-white/60 font-normal leading-tight">{weather.windDirection}</span>
-            </div>
+            <div className="font-semibold">{weather.windSpeed} mph</div>
+            <div className="text-[0.65em] text-white/60 font-normal mt-0.5">{weather.windDirection}</div>
           </div>
           <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center flex flex-col items-center justify-center">
             <Sun className="w-5 h-5 mb-1" />
