@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   MapPin, 
   Thermometer, 
@@ -51,6 +51,7 @@ interface WeatherData {
     windSpeed: number;
     chanceOfRain: number;
   }>;
+  windDirection: string;
 }
 
 const WeatherWidget = () => {
@@ -59,6 +60,9 @@ const WeatherWidget = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [showHourly, setShowHourly] = useState(true);
+
+  const forecastScrollRef = useRef<HTMLDivElement>(null);
+  const scrollInterval = useRef<NodeJS.Timeout | null>(null);
 
   const getWeatherIcon = (condition: string, size: string = "w-8 h-8") => {
     const iconClass = `${size} text-white drop-shadow-md`;
@@ -147,6 +151,25 @@ const WeatherWidget = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const startScroll = (direction: 'left' | 'right') => {
+    if (scrollInterval.current) return;
+    scrollInterval.current = setInterval(() => {
+      if (forecastScrollRef.current) {
+        forecastScrollRef.current.scrollBy({
+          left: direction === 'left' ? -10 : 10,
+          behavior: 'smooth',
+        });
+      }
+    }, 16); // ~60fps
+  };
+
+  const stopScroll = () => {
+    if (scrollInterval.current) {
+      clearInterval(scrollInterval.current);
+      scrollInterval.current = null;
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-xl">
@@ -196,13 +219,10 @@ const WeatherWidget = () => {
       
       <div className="relative z-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-2">
-            <MapPin className="w-5 h-5" />
-            <div>
-              <div className="font-semibold text-lg">{weather.location}</div>
-              <div className="text-sm opacity-80">{weather.country}</div>
-            </div>
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex items-start space-x-1 mt-1">
+            <MapPin className="w-4 h-4 mt-0.5" />
+            <div className="font-semibold text-base leading-tight">{weather.location}</div>
           </div>
           <button
             onClick={handleRefresh}
@@ -235,7 +255,7 @@ const WeatherWidget = () => {
           <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
             <Wind className="w-5 h-5 mx-auto mb-1" />
             <div className="text-xs opacity-80">Wind</div>
-            <div className="font-semibold">{weather.windSpeed} km/h</div>
+            <div className="font-semibold">{weather.windSpeed} mph <span className="text-[0.7em] text-white/60 font-normal align-middle">{weather.windDirection}</span></div>
           </div>
           <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
             <Sun className="w-5 h-5 mx-auto mb-1" />
@@ -245,60 +265,74 @@ const WeatherWidget = () => {
         </div>
 
         {/* Forecast toggle */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-sm font-semibold opacity-90">
-            {showHourly ? 'Hourly Forecast' : 'Weekly Forecast'}
-          </div>
-          <div className="flex bg-white/15 backdrop-blur-sm rounded-lg p-1">
-            <button
-              onClick={() => setShowHourly(true)}
-              className={`flex items-center space-x-1 px-3 py-1 rounded text-xs transition-colors ${
-                showHourly ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
-              }`}
-            >
-              <Clock className="w-3 h-3" />
-              <span>Hourly</span>
-            </button>
-            <button
-              onClick={() => setShowHourly(false)}
-              className={`flex items-center space-x-1 px-3 py-1 rounded text-xs transition-colors ${
-                !showHourly ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
-              }`}
-            >
-              <Calendar className="w-3 h-3" />
-              <span>Daily</span>
-            </button>
-          </div>
+        <div className="w-fit mx-auto flex bg-white/15 backdrop-blur-sm rounded-lg p-1 mb-3">
+          <button
+            onClick={() => setShowHourly(true)}
+            className={`flex items-center space-x-1 px-3 py-1 rounded text-xs transition-colors ${
+              showHourly ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
+            }`}
+          >
+            <Clock className="w-3 h-3" />
+            <span>Hourly</span>
+          </button>
+          <button
+            onClick={() => setShowHourly(false)}
+            className={`flex items-center space-x-1 px-3 py-1 rounded text-xs transition-colors ${
+              !showHourly ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
+            }`}
+          >
+            <Calendar className="w-3 h-3" />
+            <span>Daily</span>
+          </button>
         </div>
 
         {/* Hourly/Daily forecast */}
-        <div className="flex space-x-3 pb-2 overflow-x-auto scrollbar-hide scroll-smooth">
-          {showHourly ? (
-            weather.hourlyForecast.slice(0, 8).map((hour, index) => (
-              <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
-                <div className="text-xs opacity-80 mb-1">{hour.hour}</div>
-                <div className="flex justify-center mb-1">
-                  {getWeatherIcon(hour.condition, "w-5 h-5")}
+        <div className="relative">
+          <div
+            ref={forecastScrollRef}
+            className="flex space-x-3 pb-2 overflow-x-auto scrollbar-hide"
+            style={{ scrollBehavior: 'smooth' }}
+          >
+            {showHourly ? (
+              weather.hourlyForecast.slice(0, 8).map((hour, index) => (
+                <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
+                  <div className="text-xs opacity-80 mb-1">{hour.hour}</div>
+                  <div className="flex justify-center mb-1">
+                    {getWeatherIcon(hour.condition, "w-5 h-5")}
+                  </div>
+                  <div className="text-sm font-semibold mb-1">{hour.temperature}°</div>
+                  <div className="text-xs opacity-70">{hour.chanceOfRain}%</div>
                 </div>
-                <div className="text-sm font-semibold mb-1">{hour.temperature}°</div>
-                <div className="text-xs opacity-70">{hour.chanceOfRain}%</div>
-              </div>
-            ))
-          ) : (
-            weather.dailyForecast.slice(0, 7).map((day, index) => (
-              <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
-                <div className="text-xs opacity-80 mb-1">{day.day}</div>
-                <div className="flex justify-center mb-1">
-                  {getWeatherIcon(day.condition, "w-5 h-5")}
+              ))
+            ) : (
+              weather.dailyForecast.slice(0, 7).map((day, index) => (
+                <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
+                  <div className="text-xs opacity-80 mb-1">{day.day}</div>
+                  <div className="flex justify-center mb-1">
+                    {getWeatherIcon(day.condition, "w-5 h-5")}
+                  </div>
+                  <div className="text-xs">
+                    <div className="font-semibold">{day.high}°</div>
+                    <div className="opacity-70">{day.low}°</div>
+                  </div>
+                  <div className="text-xs opacity-70 mt-1">{day.chanceOfRain}%</div>
                 </div>
-                <div className="text-xs">
-                  <div className="font-semibold">{day.high}°</div>
-                  <div className="opacity-70">{day.low}°</div>
-                </div>
-                <div className="text-xs opacity-70 mt-1">{day.chanceOfRain}%</div>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
+          {/* Hover zones for auto-scroll */}
+          <div
+            className="absolute left-0 top-0 h-full w-6 z-20 cursor-w-resize"
+            style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.08), transparent)' }}
+            onMouseEnter={() => startScroll('left')}
+            onMouseLeave={stopScroll}
+          />
+          <div
+            className="absolute right-0 top-0 h-full w-6 z-20 cursor-e-resize"
+            style={{ background: 'linear-gradient(to left, rgba(0,0,0,0.08), transparent)' }}
+            onMouseEnter={() => startScroll('right')}
+            onMouseLeave={stopScroll}
+          />
         </div>
         <style>{`
           .scrollbar-hide::-webkit-scrollbar { display: none; }

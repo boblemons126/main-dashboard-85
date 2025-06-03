@@ -4,6 +4,7 @@ interface WeatherData {
   description: string;
   humidity: number;
   windSpeed: number;
+  windDirection: string;
   pressure: number;
   visibility: number;
   location: string;
@@ -50,25 +51,58 @@ const getConditionFromIcon = (icon: string): string => {
   return iconMap[icon] || 'Unknown';
 };
 
-const getLocationName = async (latitude: number, longitude: number): Promise<{ location: string; country: string }> => {
+const getLocationName = async (latitude: number, longitude: number): Promise<{ location: string; county: string }> => {
   try {
-    // Use a reverse geocoding service to get location name
     const response = await fetch(
       `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
     );
     const data = await response.json();
+    
+    // Get the city name
+    const city = data.city || data.locality || 'Unknown Location';
+    
+    // Get the county name
+    let county = '';
+    if (data.localityInfo && data.localityInfo.administrative) {
+      // Find the county level entry
+      const countyEntry = data.localityInfo.administrative.find((a: any) => 
+        a.adminLevel === 6 || // Standard county level
+        (a.name && 
+         !a.name.toLowerCase().includes('england') && 
+         !a.name.toLowerCase().includes('kingdom') &&
+         a.name.toLowerCase() !== city.toLowerCase())
+      );
+      
+      if (countyEntry && countyEntry.name) {
+        county = countyEntry.name;
+      }
+    }
+
+    // Format the location string as "City, County"
+    const location = county ? `${city}, ${county}` : city;
+    
     return {
-      location: data.city || data.locality || 'Unknown Location',
-      country: data.countryName || 'Unknown Country'
+      location,
+      county
     };
   } catch (error) {
     console.error('Error getting location name:', error);
     return {
       location: 'Unknown Location',
-      country: 'Unknown Country'
+      county: ''
     };
   }
 };
+
+// Helper to convert degrees to 8-point compass direction with full names
+function degToCompass(num: number) {
+  const directions = [
+    'North', 'North East', 'East', 'South East',
+    'South', 'South West', 'West', 'North West'
+  ];
+  const val = Math.floor((num / 45) + 0.5) % 8;
+  return directions[val];
+}
 
 export const getWeatherData = async (latitude: number, longitude: number): Promise<WeatherData> => {
   const apiKey = 'IOSfbJRQf6aandt4MVF84vWA1KNfTDSq'; // You'll need to get this from pirateweather.net
@@ -128,15 +162,16 @@ export const getWeatherData = async (latitude: number, longitude: number): Promi
       condition: getConditionFromIcon(current.icon),
       description: getConditionFromIcon(current.icon),
       humidity: Math.round((current.humidity || 0) * 100),
-      windSpeed: Math.round(current.windSpeed || 0),
+      windSpeed: Math.round((current.windSpeed || 0) * 0.621371), // Convert km/h to mph
+      windDirection: current.windBearing !== undefined ? degToCompass(current.windBearing) : '--',
       pressure: Math.round(current.pressure || 0),
       visibility: Math.round((current.visibility || 0) * 1.60934), // Convert miles to km
       location: locationInfo.location,
-      country: locationInfo.country,
+      country: locationInfo.county,
       icon: current.icon,
       feelsLike: Math.round(current.apparentTemperature),
       uvIndex: Math.round(current.uvIndex || 0),
-      sunset: today && today.sunsetTime ? new Date(today.sunsetTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
+      sunset: today && today.sunsetTime ? new Date(today.sunsetTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '--',
       hourlyForecast: hourlyForecasts,
       dailyForecast: dailyForecasts
     };
