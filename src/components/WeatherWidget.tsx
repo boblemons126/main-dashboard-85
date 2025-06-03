@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Cloud, CloudRain, Sun, CloudSnow, Wind, Droplets, Thermometer, Eye, MapPin, ChevronRight } from 'lucide-react';
+import { Cloud, CloudRain, Sun, CloudSnow, Wind, Droplets, Thermometer, Eye, MapPin } from 'lucide-react';
 import { getWeatherData } from '../services/weather';
 
 interface WeatherData {
@@ -16,18 +15,12 @@ interface WeatherData {
     low: number;
     condition: string;
   }>;
-  hourlyForecast: Array<{
-    time: string;
-    temperature: number;
-    condition: string;
-    precipitation: number;
-  }>;
 }
 
 const WeatherWidget = () => {
   const [weather, setWeather] = useState<WeatherData>({
-    temperature: 17,
-    condition: 'cloudy',
+    temperature: 72,
+    condition: 'sunny',
     humidity: 65,
     windSpeed: 8,
     visibility: 10,
@@ -37,13 +30,6 @@ const WeatherWidget = () => {
       { day: 'Tomorrow', high: 73, low: 58, condition: 'cloudy' },
       { day: 'Wed', high: 68, low: 55, condition: 'rainy' },
       { day: 'Thu', high: 71, low: 59, condition: 'sunny' },
-    ],
-    hourlyForecast: [
-      { time: '15:00', temperature: 17, condition: 'cloudy', precipitation: 0 },
-      { time: '16:00', temperature: 16, condition: 'cloudy', precipitation: 0 },
-      { time: '17:00', temperature: 16, condition: 'cloudy', precipitation: 0 },
-      { time: '18:00', temperature: 15, condition: 'cloudy', precipitation: 1 },
-      { time: '19:00', temperature: 15, condition: 'cloudy', precipitation: 1 },
     ]
   });
   const [loading, setLoading] = useState(true);
@@ -53,18 +39,37 @@ const WeatherWidget = () => {
     switch (condition.toLowerCase()) {
       case 'clear':
       case 'sunny':
-        return <Sun className="w-6 h-6 text-yellow-300" />;
+        return <Sun className="w-8 h-8 text-yellow-400" />;
       case 'clouds':
       case 'cloudy':
-        return <Cloud className="w-6 h-6 text-white/90" />;
+        return <Cloud className="w-8 h-8 text-gray-300" />;
       case 'rain':
       case 'rainy':
-        return <CloudRain className="w-6 h-6 text-blue-200" />;
+        return <CloudRain className="w-8 h-8 text-blue-400" />;
       case 'snow':
       case 'snowy':
-        return <CloudSnow className="w-6 h-6 text-blue-100" />;
+        return <CloudSnow className="w-8 h-8 text-blue-200" />;
       default:
-        return <Cloud className="w-6 h-6 text-white/90" />;
+        return <Sun className="w-8 h-8 text-yellow-400" />;
+    }
+  };
+
+  const getConditionGradient = (condition: string) => {
+    switch (condition.toLowerCase()) {
+      case 'clear':
+      case 'sunny':
+        return 'from-yellow-400 via-orange-400 to-red-400';
+      case 'clouds':
+      case 'cloudy':
+        return 'from-gray-400 via-blue-400 to-gray-500';
+      case 'rain':
+      case 'rainy':
+        return 'from-blue-400 via-blue-500 to-blue-600';
+      case 'snow':
+      case 'snowy':
+        return 'from-blue-200 via-blue-300 to-blue-400';
+      default:
+        return 'from-yellow-400 via-orange-400 to-red-400';
     }
   };
 
@@ -92,7 +97,8 @@ const WeatherWidget = () => {
         ...prevWeather,
         temperature: weatherData.temperature,
         location: weatherData.location,
-        condition: 'cloudy',
+        condition: 'clear', // You can enhance this based on weather codes
+        // Keep existing forecast data as the basic API doesn't include forecast
       }));
       
     } catch (error) {
@@ -115,76 +121,79 @@ const WeatherWidget = () => {
   }, []);
 
   return (
-    <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-2xl p-6 text-white relative overflow-hidden">
+    <div className={`bg-gradient-to-br ${getConditionGradient(weather.condition)} rounded-2xl p-6 text-white relative overflow-hidden`}>
       {/* Background decoration */}
-      <div className="absolute inset-0 bg-black/10"></div>
-      
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
       <div className="relative z-10">
-        {/* Header with location */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-white rounded-full opacity-60"></div>
-            <h2 className="text-lg font-medium">
-              {loading ? 'Loading...' : error ? 'Location unavailable' : weather.location}
-            </h2>
-          </div>
-          <button className="text-white/60 hover:text-white">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Main temperature and condition */}
-        <div className="flex items-center space-x-4 mb-4">
-          <div className="flex items-center space-x-3">
-            {getWeatherIcon(weather.condition)}
-            <span className="text-4xl font-light">
-              {loading ? '--' : `${weather.temperature}°C`}
-            </span>
-          </div>
-          <div className="flex items-center space-x-2 text-white/80">
-            <span>Expect 4 rainy days in a row starting Tomorrow.</span>
-            <ChevronRight className="w-4 h-4" />
-          </div>
-        </div>
-
-        {/* Hourly and Daily tabs */}
-        <div className="flex space-x-6 mb-4">
-          <button className="text-white font-medium border-b-2 border-white pb-1">
-            Hourly
-          </button>
-          <button className="text-white/60 hover:text-white font-medium">
-            Daily
-          </button>
-        </div>
-
-        {/* Hourly forecast */}
-        <div className="flex justify-between space-x-4">
-          {weather.hourlyForecast.map((hour, index) => (
-            <div key={index} className="flex flex-col items-center space-y-2 min-w-0 flex-1">
-              <div className="text-sm text-white/80 font-medium">
-                {hour.time}
-              </div>
-              <div className="flex justify-center">
-                {getWeatherIcon(hour.condition)}
-              </div>
-              <div className="text-lg font-medium">
-                {hour.temperature}°
-              </div>
-              <div className="text-xs text-white/60 flex items-center space-x-1">
-                <Droplets className="w-3 h-3" />
-                <span>{hour.precipitation}%</span>
-              </div>
+        {/* Main weather info */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="flex items-center space-x-3 mb-2">
+              {getWeatherIcon(weather.condition)}
+              <h2 className="text-2xl font-bold">Weather</h2>
             </div>
-          ))}
+            <div className="flex items-center space-x-2">
+              <MapPin className="w-4 h-4" />
+              <p className="text-white/80 capitalize">
+                {loading ? 'Loading...' : error ? 'Location unavailable' : weather.location}
+              </p>
+            </div>
+            {error && (
+              <p className="text-red-200 text-sm mt-1">{error}</p>
+            )}
+          </div>
+          <div className="text-right">
+            <div className="text-4xl font-bold">
+              {loading ? '--' : `${weather.temperature}°`}
+            </div>
+            <div className="text-white/80 text-sm">
+              Feels like {loading ? '--' : `${weather.temperature + 2}°`}
+            </div>
+          </div>
         </div>
 
-        {/* See full forecast link */}
-        <div className="mt-4 text-right">
-          <button className="text-white/80 hover:text-white text-sm underline">
-            See full forecast
-          </button>
+        {/* Weather details */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-white/20 rounded-xl p-3 backdrop-blur-sm">
+            <div className="flex items-center space-x-2 mb-1">
+              <Droplets className="w-4 h-4" />
+              <span className="text-sm opacity-80">Humidity</span>
+            </div>
+            <div className="text-lg font-semibold">{weather.humidity}%</div>
+          </div>
+          <div className="bg-white/20 rounded-xl p-3 backdrop-blur-sm">
+            <div className="flex items-center space-x-2 mb-1">
+              <Wind className="w-4 h-4" />
+              <span className="text-sm opacity-80">Wind</span>
+            </div>
+            <div className="text-lg font-semibold">{weather.windSpeed} mph</div>
+          </div>
+          <div className="bg-white/20 rounded-xl p-3 backdrop-blur-sm">
+            <div className="flex items-center space-x-2 mb-1">
+              <Eye className="w-4 h-4" />
+              <span className="text-sm opacity-80">Visibility</span>
+            </div>
+            <div className="text-lg font-semibold">{weather.visibility} mi</div>
+          </div>
+        </div>
+
+        {/* Forecast */}
+        <div>
+          <h3 className="text-lg font-semibold mb-3">4-Day Forecast</h3>
+          <div className="grid grid-cols-4 gap-3">
+            {weather.forecast.map((day, index) => (
+              <div key={index} className="bg-white/20 rounded-xl p-3 text-center backdrop-blur-sm">
+                <div className="text-sm opacity-80 mb-2">{day.day}</div>
+                <div className="flex justify-center mb-2">
+                  {getWeatherIcon(day.condition)}
+                </div>
+                <div className="text-sm">
+                  <div className="font-semibold">{day.high}°</div>
+                  <div className="opacity-70">{day.low}°</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
