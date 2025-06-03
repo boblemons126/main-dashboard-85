@@ -1,4 +1,3 @@
-
 interface WeatherData {
   temperature: number;
   condition: string;
@@ -12,6 +11,7 @@ interface WeatherData {
   icon: string;
   feelsLike: number;
   uvIndex: number;
+  sunset: string;
   hourlyForecast: Array<{
     time: string;
     hour: string;
@@ -121,6 +121,7 @@ export const getWeatherData = async (latitude: number, longitude: number): Promi
     });
 
     const current = data.currently;
+    const today = data.daily.data[0];
 
     return {
       temperature: Math.round(current.temperature),
@@ -135,6 +136,7 @@ export const getWeatherData = async (latitude: number, longitude: number): Promi
       icon: current.icon,
       feelsLike: Math.round(current.apparentTemperature),
       uvIndex: Math.round(current.uvIndex || 0),
+      sunset: today && today.sunsetTime ? new Date(today.sunsetTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
       hourlyForecast: hourlyForecasts,
       dailyForecast: dailyForecasts
     };

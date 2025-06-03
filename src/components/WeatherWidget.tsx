@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   MapPin, 
@@ -31,6 +30,7 @@ interface WeatherData {
   icon: string;
   feelsLike: number;
   uvIndex: number;
+  sunset: string;
   hourlyForecast: Array<{
     time: string;
     hour: string;
@@ -238,9 +238,9 @@ const WeatherWidget = () => {
             <div className="font-semibold">{weather.windSpeed} km/h</div>
           </div>
           <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
-            <Gauge className="w-5 h-5 mx-auto mb-1" />
-            <div className="text-xs opacity-80">Pressure</div>
-            <div className="font-semibold">{weather.pressure} mb</div>
+            <Sun className="w-5 h-5 mx-auto mb-1" />
+            <div className="text-xs opacity-80">Sunset</div>
+            <div className="font-semibold">{weather && weather.sunset ? weather.sunset : '--'}</div>
           </div>
         </div>
 
@@ -272,36 +272,38 @@ const WeatherWidget = () => {
         </div>
 
         {/* Hourly/Daily forecast */}
-        <div className="overflow-x-auto">
-          <div className="flex space-x-3 pb-2">
-            {showHourly ? (
-              weather.hourlyForecast.slice(0, 8).map((hour, index) => (
-                <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
-                  <div className="text-xs opacity-80 mb-1">{hour.hour}</div>
-                  <div className="flex justify-center mb-1">
-                    {getWeatherIcon(hour.condition, "w-5 h-5")}
-                  </div>
-                  <div className="text-sm font-semibold mb-1">{hour.temperature}°</div>
-                  <div className="text-xs opacity-70">{hour.chanceOfRain}%</div>
+        <div className="flex space-x-3 pb-2 overflow-x-auto scrollbar-hide scroll-smooth">
+          {showHourly ? (
+            weather.hourlyForecast.slice(0, 8).map((hour, index) => (
+              <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
+                <div className="text-xs opacity-80 mb-1">{hour.hour}</div>
+                <div className="flex justify-center mb-1">
+                  {getWeatherIcon(hour.condition, "w-5 h-5")}
                 </div>
-              ))
-            ) : (
-              weather.dailyForecast.slice(0, 7).map((day, index) => (
-                <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
-                  <div className="text-xs opacity-80 mb-1">{day.day}</div>
-                  <div className="flex justify-center mb-1">
-                    {getWeatherIcon(day.condition, "w-5 h-5")}
-                  </div>
-                  <div className="text-xs">
-                    <div className="font-semibold">{day.high}°</div>
-                    <div className="opacity-70">{day.low}°</div>
-                  </div>
-                  <div className="text-xs opacity-70 mt-1">{day.chanceOfRain}%</div>
+                <div className="text-sm font-semibold mb-1">{hour.temperature}°</div>
+                <div className="text-xs opacity-70">{hour.chanceOfRain}%</div>
+              </div>
+            ))
+          ) : (
+            weather.dailyForecast.slice(0, 7).map((day, index) => (
+              <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
+                <div className="text-xs opacity-80 mb-1">{day.day}</div>
+                <div className="flex justify-center mb-1">
+                  {getWeatherIcon(day.condition, "w-5 h-5")}
                 </div>
-              ))
-            )}
-          </div>
+                <div className="text-xs">
+                  <div className="font-semibold">{day.high}°</div>
+                  <div className="opacity-70">{day.low}°</div>
+                </div>
+                <div className="text-xs opacity-70 mt-1">{day.chanceOfRain}%</div>
+              </div>
+            ))
+          )}
         </div>
+        <style>{`
+          .scrollbar-hide::-webkit-scrollbar { display: none; }
+          .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        `}</style>
 
         {/* Last updated */}
         {lastUpdated && (
