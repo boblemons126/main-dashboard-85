@@ -1,12 +1,7 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Thermometer, Droplets, Wind, Eye, Gauge, Sun, Cloud, CloudRain, CloudSnow, Zap, RefreshCw, Clock, Calendar, ChevronDown } from 'lucide-react';
-import { getWeatherData } from '../services/weather';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { MapPin, Thermometer, Droplets, Wind, Eye, Gauge, Sun, Cloud, CloudRain, CloudSnow, Zap, RefreshCw, Clock, Calendar } from 'lucide-react';
+import { getOpenWeatherData } from '../services/openWeatherService';
 
 interface WeatherData {
   temperature: number;
@@ -45,32 +40,14 @@ interface WeatherData {
   windDirection: string;
 }
 
-interface SavedLocation {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-}
-
-const WeatherWidget = () => {
+const OpenWeatherWidget = () => {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [showHourly, setShowHourly] = useState(true);
-  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<SavedLocation | null>(null);
   const forecastScrollRef = useRef<HTMLDivElement>(null);
   const scrollInterval = useRef<NodeJS.Timeout | null>(null);
-
-  // Load saved locations from localStorage on component mount
-  useEffect(() => {
-    const saved = localStorage.getItem('weatherLocations');
-    if (saved) {
-      const locations = JSON.parse(saved);
-      setSavedLocations(locations);
-    }
-  }, []);
 
   const getWeatherIcon = (condition: string, size: string = "w-8 h-8") => {
     const iconClass = `${size} text-white drop-shadow-md`;
@@ -93,7 +70,7 @@ const WeatherWidget = () => {
   const getGradientByCondition = (condition: string) => {
     const conditionLower = condition.toLowerCase();
     if (conditionLower.includes('clear') || conditionLower.includes('sunny')) {
-      return 'from-blue-400 via-blue-500 to-blue-600';
+      return 'from-orange-400 via-orange-500 to-orange-600';
     } else if (conditionLower.includes('cloud')) {
       return 'from-gray-400 via-gray-500 to-gray-600';
     } else if (conditionLower.includes('rain') || conditionLower.includes('drizzle')) {
@@ -103,38 +80,29 @@ const WeatherWidget = () => {
     } else if (conditionLower.includes('thunder')) {
       return 'from-gray-700 via-gray-800 to-gray-900';
     } else {
-      return 'from-blue-400 via-blue-500 to-blue-600';
+      return 'from-orange-400 via-orange-500 to-orange-600';
     }
   };
 
-  const fetchWeatherData = async (location?: SavedLocation) => {
+  const fetchWeatherData = async () => {
     setLoading(true);
     setError(null);
     try {
-      let latitude, longitude;
-      
-      if (location) {
-        latitude = location.latitude;
-        longitude = location.longitude;
-      } else {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            timeout: 10000,
-            enableHighAccuracy: true,
-            maximumAge: 300000
-          });
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          timeout: 10000,
+          enableHighAccuracy: true,
+          maximumAge: 300000
         });
-        latitude = position.coords.latitude;
-        longitude = position.coords.longitude;
-      }
-      
-      console.log('Fetching weather for location:', { latitude, longitude });
-      const weatherData = await getWeatherData(latitude, longitude);
-      console.log('Weather data received:', weatherData);
+      });
+      const { latitude, longitude } = position.coords;
+      console.log('Fetching OpenWeatherMap data for location:', { latitude, longitude });
+      const weatherData = await getOpenWeatherData(latitude, longitude);
+      console.log('OpenWeatherMap data received:', weatherData);
       setWeather(weatherData);
       setLastUpdated(new Date());
     } catch (error) {
-      console.error('Error fetching weather:', error);
+      console.error('Error fetching OpenWeatherMap weather:', error);
       if (error instanceof GeolocationPositionError) {
         setError('Location access denied. Please enable location services.');
       } else if (error instanceof Error) {
@@ -147,23 +115,13 @@ const WeatherWidget = () => {
     }
   };
 
-  const handleLocationSelect = (location: SavedLocation) => {
-    setSelectedLocation(location);
-    fetchWeatherData(location);
-  };
-
-  const handleCurrentLocationSelect = () => {
-    setSelectedLocation(null);
-    fetchWeatherData();
-  };
-
   const handleRefresh = () => {
-    fetchWeatherData(selectedLocation || undefined);
+    fetchWeatherData();
   };
 
   useEffect(() => {
     fetchWeatherData();
-    const interval = setInterval(() => fetchWeatherData(selectedLocation || undefined), 600000);
+    const interval = setInterval(fetchWeatherData, 600000);
     return () => clearInterval(interval);
   }, []);
 
@@ -176,7 +134,7 @@ const WeatherWidget = () => {
           behavior: 'smooth'
         });
       }
-    }, 16); // ~60fps
+    }, 16);
   };
 
   const stopScroll = () => {
@@ -188,10 +146,10 @@ const WeatherWidget = () => {
 
   if (loading) {
     return (
-      <div className="bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-xl">
+      <div className="bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 rounded-2xl p-6 text-white shadow-xl">
         <div className="animate-pulse">
           <div className="flex items-center justify-between mb-4">
-            <div className="h-6 bg-white/20 rounded w-24"></div>
+            <div className="h-6 bg-white/20 rounded w-32"></div>
             <div className="h-8 bg-white/20 rounded w-16"></div>
           </div>
           <div className="h-12 bg-white/20 rounded w-32 mb-4"></div>
@@ -210,7 +168,7 @@ const WeatherWidget = () => {
     return (
       <div className="bg-gradient-to-br from-red-400 via-red-500 to-red-600 rounded-2xl p-6 text-white shadow-xl">
         <div className="text-center">
-          <div className="text-xl font-bold mb-2">Weather Unavailable</div>
+          <div className="text-xl font-bold mb-2">OpenWeather Unavailable</div>
           <div className="text-sm opacity-90 mb-4">{error}</div>
           <button
             onClick={handleRefresh}
@@ -234,45 +192,16 @@ const WeatherWidget = () => {
       <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-white/5 rounded-full"></div>
       
       <div className="relative z-10">
-        {/* Header with Location Dropdown */}
+        {/* Header */}
         <div className="flex items-start justify-between mb-6">
-          <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-start space-x-1 mt-1 hover:bg-white/10 rounded-lg p-2 transition-colors">
-              <MapPin className="w-4 h-4 mt-0.5" />
-              <div className="text-left">
-                <div className="font-semibold text-base leading-tight flex items-center space-x-1">
-                  <span>{weather.location}</span>
-                  <ChevronDown className="w-3 h-3" />
-                </div>
-                {weather.county && <div className="text-sm opacity-70">{weather.county}</div>}
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-white/95 backdrop-blur-sm border-white/20">
-              <DropdownMenuItem 
-                onClick={handleCurrentLocationSelect}
-                className="cursor-pointer hover:bg-blue-100/50"
-              >
-                <MapPin className="w-4 h-4 mr-2" />
-                Current Location
-              </DropdownMenuItem>
-              {savedLocations.map((location) => (
-                <DropdownMenuItem 
-                  key={location.id}
-                  onClick={() => handleLocationSelect(location)}
-                  className="cursor-pointer hover:bg-blue-100/50"
-                >
-                  <MapPin className="w-4 h-4 mr-2" />
-                  {location.name}
-                </DropdownMenuItem>
-              ))}
-              {savedLocations.length === 0 && (
-                <DropdownMenuItem disabled className="text-gray-500">
-                  No saved locations
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
+          <div className="flex items-start space-x-1 mt-1">
+            <MapPin className="w-4 h-4 mt-0.5" />
+            <div>
+              <div className="font-semibold text-base leading-tight">{weather.location}</div>
+              {weather.county && <div className="text-sm opacity-70">{weather.county}</div>}
+              <div className="text-xs opacity-60 mt-1">OpenWeatherMap</div>
+            </div>
+          </div>
           <button
             onClick={handleRefresh}
             className="p-2 hover:bg-white/20 rounded-lg transition-colors"
@@ -304,23 +233,33 @@ const WeatherWidget = () => {
           <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
             <Wind className="w-5 h-5 mx-auto mb-1" />
             <div className="text-xs opacity-80">Wind</div>
-            <div className="font-semibold my-[8px]">{weather.windSpeed} mph</div>
+            <div className="font-semibold my-[8px]">{weather.windSpeed} km/h</div>
             <div className="text-xs opacity-70 -mt-1">{weather.windDirection}</div>
           </div>
           <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
             <Sun className="w-5 h-5 mx-auto mb-1" />
             <div className="text-xs opacity-80">Sunset</div>
-            <div className="font-semibold my-[8px]">{weather && weather.sunset ? weather.sunset : '--'}</div>
+            <div className="font-semibold my-[8px]">{weather.sunset}</div>
           </div>
         </div>
 
         {/* Forecast toggle */}
         <div className="w-fit mx-auto flex bg-white/15 backdrop-blur-sm rounded-lg p-1 mb-3">
-          <button onClick={() => setShowHourly(true)} className={`flex items-center space-x-1 px-3 py-1 rounded text-xs transition-colors ${showHourly ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'}`}>
+          <button
+            onClick={() => setShowHourly(true)}
+            className={`flex items-center space-x-1 px-3 py-1 rounded text-xs transition-colors ${
+              showHourly ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
+            }`}
+          >
             <Clock className="w-3 h-3" />
             <span>Hourly</span>
           </button>
-          <button onClick={() => setShowHourly(false)} className={`flex items-center space-x-1 px-3 py-1 rounded text-xs transition-colors ${!showHourly ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'}`}>
+          <button
+            onClick={() => setShowHourly(false)}
+            className={`flex items-center space-x-1 px-3 py-1 rounded text-xs transition-colors ${
+              !showHourly ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
+            }`}
+          >
             <Calendar className="w-3 h-3" />
             <span>Daily</span>
           </button>
@@ -328,35 +267,49 @@ const WeatherWidget = () => {
 
         {/* Hourly/Daily forecast */}
         <div className="relative">
-          <div ref={forecastScrollRef} className="flex space-x-3 pb-2 overflow-x-auto scrollbar-hide" style={{
-          scrollBehavior: 'smooth'
-        }}>
-            {showHourly ? weather.hourlyForecast.slice(0, 8).map((hour, index) => <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
-                  <div className="text-xs opacity-80 mb-1">{hour.hour}</div>
-                  <div className="flex justify-center mb-1">
-                    {getWeatherIcon(hour.condition, "w-5 h-5")}
+          <div
+            ref={forecastScrollRef}
+            className="flex space-x-3 pb-2 overflow-x-auto scrollbar-hide"
+            style={{ scrollBehavior: 'smooth' }}
+          >
+            {showHourly
+              ? weather.hourlyForecast.slice(0, 8).map((hour, index) => (
+                  <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
+                    <div className="text-xs opacity-80 mb-1">{hour.hour}</div>
+                    <div className="flex justify-center mb-1">
+                      {getWeatherIcon(hour.condition, "w-5 h-5")}
+                    </div>
+                    <div className="text-sm font-semibold mb-1">{hour.temperature}°</div>
+                    <div className="text-xs opacity-70">{hour.chanceOfRain}%</div>
                   </div>
-                  <div className="text-sm font-semibold mb-1">{hour.temperature}°</div>
-                  <div className="text-xs opacity-70">{hour.chanceOfRain}%</div>
-                </div>) : weather.dailyForecast.slice(0, 7).map((day, index) => <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
-                  <div className="text-xs opacity-80 mb-1">{day.day}</div>
-                  <div className="flex justify-center mb-1">
-                    {getWeatherIcon(day.condition, "w-5 h-5")}
+                ))
+              : weather.dailyForecast.slice(0, 7).map((day, index) => (
+                  <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
+                    <div className="text-xs opacity-80 mb-1">{day.day}</div>
+                    <div className="flex justify-center mb-1">
+                      {getWeatherIcon(day.condition, "w-5 h-5")}
+                    </div>
+                    <div className="text-xs">
+                      <div className="font-semibold">{day.high}°</div>
+                      <div className="opacity-70">{day.low}°</div>
+                    </div>
+                    <div className="text-xs opacity-70 mt-1">{day.chanceOfRain}%</div>
                   </div>
-                  <div className="text-xs">
-                    <div className="font-semibold">{day.high}°</div>
-                    <div className="opacity-70">{day.low}°</div>
-                  </div>
-                  <div className="text-xs opacity-70 mt-1">{day.chanceOfRain}%</div>
-                </div>)}
+                ))}
           </div>
           {/* Hover zones for auto-scroll */}
-          <div className="absolute left-0 top-0 h-full w-6 z-20 cursor-w-resize" style={{
-          background: 'linear-gradient(to right, rgba(0,0,0,0.08), transparent)'
-        }} onMouseEnter={() => startScroll('left')} onMouseLeave={stopScroll} />
-          <div className="absolute right-0 top-0 h-full w-6 z-20 cursor-e-resize" style={{
-          background: 'linear-gradient(to left, rgba(0,0,0,0.08), transparent)'
-        }} onMouseEnter={() => startScroll('right')} onMouseLeave={stopScroll} />
+          <div
+            className="absolute left-0 top-0 h-full w-6 z-20 cursor-w-resize"
+            style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.08), transparent)' }}
+            onMouseEnter={() => startScroll('left')}
+            onMouseLeave={stopScroll}
+          />
+          <div
+            className="absolute right-0 top-0 h-full w-6 z-20 cursor-e-resize"
+            style={{ background: 'linear-gradient(to left, rgba(0,0,0,0.08), transparent)' }}
+            onMouseEnter={() => startScroll('right')}
+            onMouseLeave={stopScroll}
+          />
         </div>
         <style>{`
           .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -364,12 +317,14 @@ const WeatherWidget = () => {
         `}</style>
 
         {/* Last updated */}
-        {lastUpdated && <div className="text-xs opacity-60 mt-4 text-center">
+        {lastUpdated && (
+          <div className="text-xs opacity-60 mt-4 text-center">
             Last updated: {lastUpdated.toLocaleTimeString()}
-          </div>}
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
-export default WeatherWidget;
+export default OpenWeatherWidget;

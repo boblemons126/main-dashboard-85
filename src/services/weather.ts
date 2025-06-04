@@ -1,3 +1,4 @@
+
 interface WeatherData {
   temperature: number;
   condition: string;
@@ -97,7 +98,7 @@ function degToCompass(num: number) {
 }
 
 export const getWeatherData = async (latitude: number, longitude: number): Promise<WeatherData> => {
-  const apiKey = 'IOSfbJRQf6aandt4MVF84vWA1KNfTDSq'; // You'll need to get this from pirateweather.net
+  const apiKey = 'rW4utOXu6zfx1kTdyfODEYQN09ZS3vlV'; // Updated API key
   
   try {
     // Fetch weather data from Pirate Weather API
