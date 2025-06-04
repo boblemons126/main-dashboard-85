@@ -18,7 +18,7 @@ const UtilitiesPage = () => {
       color: 'text-green-400',
       bgColor: 'bg-green-500/20',
       borderColor: 'border-green-500/30',
-      linkTo: '/utilities/timer'
+      linkTo: '/utilities/NewsPage'
     },
     {
       icon: <Clipboard className="w-6 h-6" />,

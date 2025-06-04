@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../../ui/chart';
@@ -34,7 +33,7 @@ const WeatherChartCore: React.FC<WeatherChartCoreProps> = ({
   showSunriseSunset,
 }) => {
   return (
-    <div className="h-80 w-full">
+    <div className="h-80 w-full [&_.recharts-cartesian-axis-tick_text]:!fill-white">
       <ChartContainer config={chartConfig} className="h-full w-full">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
@@ -51,26 +50,30 @@ const WeatherChartCore: React.FC<WeatherChartCoreProps> = ({
             
             <CartesianGrid 
               strokeDasharray="3 3" 
-              stroke="rgba(255,255,255,0.15)" 
+              stroke="rgba(255,255,255,0.2)" 
               vertical={false}
             />
             
             <XAxis 
               dataKey="time" 
-              stroke="rgba(255,255,255,0.8)"
-              fontSize={12}
+              stroke="#FFFFFF"
+              fontSize={13}
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'rgba(255,255,255,0.8)' }}
+              tick={{ fill: '#FFFFFF', style: { color: '#FFFFFF' } }}
+              dy={8}
+              padding={{ left: 10, right: 10 }}
             />
             
             <YAxis 
-              stroke="rgba(255,255,255,0.8)"
-              fontSize={12}
+              stroke="#FFFFFF"
+              fontSize={13}
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'rgba(255,255,255,0.8)' }}
+              tick={{ fill: '#FFFFFF', style: { color: '#FFFFFF' } }}
+              dx={-8}
               domain={['dataMin - 5', 'dataMax + 5']}
+              padding={{ top: 10, bottom: 10 }}
             />
             
             <ChartTooltip 
@@ -80,7 +83,9 @@ const WeatherChartCore: React.FC<WeatherChartCoreProps> = ({
                 border: '1px solid rgba(255,255,255,0.2)',
                 borderRadius: '12px',
                 color: 'white',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+                boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+                padding: '12px 16px',
+                fontSize: '13px'
               }}
             />
             
@@ -94,7 +99,10 @@ const WeatherChartCore: React.FC<WeatherChartCoreProps> = ({
                 label={{ 
                   value: "Sunrise", 
                   position: "top",
-                  style: { fill: '#FFC107', fontSize: '12px', fontWeight: 'bold' }
+                  style: { 
+                    fill: '#FFC107', 
+                    fontSize: '13px'
+                  }
                 }}
               />
             )}
@@ -109,7 +117,10 @@ const WeatherChartCore: React.FC<WeatherChartCoreProps> = ({
                 label={{ 
                   value: "Sunset", 
                   position: "top",
-                  style: { fill: '#FF6B35', fontSize: '12px', fontWeight: 'bold' }
+                  style: { 
+                    fill: '#FF6B35', 
+                    fontSize: '13px'
+                  }
                 }}
               />
             )}

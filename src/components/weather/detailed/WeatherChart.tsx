@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { WeatherData } from '../../../types/weather';
 import ChartToggleControls from './ChartToggleControls';
@@ -57,7 +56,7 @@ const WeatherChart: React.FC<WeatherChartProps> = ({ weather }) => {
   ];
 
   return (
-    <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+    <div className="bg-white/15 rounded-2xl p-8 border border-white/20">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 space-y-4 lg:space-y-0">
         <h2 className="text-2xl font-bold text-white">Weather Trends</h2>
         
