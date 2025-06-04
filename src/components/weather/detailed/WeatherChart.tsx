@@ -1,10 +1,9 @@
 
 import React, { useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, ComposedChart } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../../ui/chart';
 import { WeatherData } from '../../../types/weather';
-import { Toggle } from '../../ui/toggle';
-import { Sunrise, Sunset, Wind, Droplets, Thermometer, Cloud } from 'lucide-react';
+import ChartToggleControls from './ChartToggleControls';
+import ChartLegend from './ChartLegend';
+import WeatherChartCore from './WeatherChartCore';
 
 interface WeatherChartProps {
   weather: WeatherData;
@@ -62,207 +61,37 @@ const WeatherChart: React.FC<WeatherChartProps> = ({ weather }) => {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 space-y-4 lg:space-y-0">
         <h2 className="text-2xl font-bold text-white">Weather Trends</h2>
         
-        {/* Toggle Controls */}
-        <div className="flex flex-wrap gap-3">
-          <Toggle
-            pressed={showTemperature}
-            onPressedChange={setShowTemperature}
-            className="data-[state=on]:bg-amber-500/30 data-[state=on]:text-amber-100 text-white/70 hover:text-white hover:bg-white/10"
-          >
-            <Thermometer className="w-4 h-4 mr-2" />
-            Temp
-          </Toggle>
-          
-          <Toggle
-            pressed={showRain}
-            onPressedChange={setShowRain}
-            className="data-[state=on]:bg-blue-500/30 data-[state=on]:text-blue-100 text-white/70 hover:text-white hover:bg-white/10"
-          >
-            <Cloud className="w-4 h-4 mr-2" />
-            Rain
-          </Toggle>
-          
-          <Toggle
-            pressed={showWind}
-            onPressedChange={setShowWind}
-            className="data-[state=on]:bg-emerald-500/30 data-[state=on]:text-emerald-100 text-white/70 hover:text-white hover:bg-white/10"
-          >
-            <Wind className="w-4 h-4 mr-2" />
-            Wind
-          </Toggle>
-          
-          <Toggle
-            pressed={showHumidity}
-            onPressedChange={setShowHumidity}
-            className="data-[state=on]:bg-purple-500/30 data-[state=on]:text-purple-100 text-white/70 hover:text-white hover:bg-white/10"
-          >
-            <Droplets className="w-4 h-4 mr-2" />
-            Humidity
-          </Toggle>
-          
-          <Toggle
-            pressed={showSunriseSunset}
-            onPressedChange={setShowSunriseSunset}
-            className="data-[state=on]:bg-orange-500/30 data-[state=on]:text-orange-100 text-white/70 hover:text-white hover:bg-white/10"
-          >
-            <Sunrise className="w-4 h-4 mr-2" />
-            Sun
-          </Toggle>
-        </div>
+        <ChartToggleControls
+          showTemperature={showTemperature}
+          setShowTemperature={setShowTemperature}
+          showRain={showRain}
+          setShowRain={setShowRain}
+          showWind={showWind}
+          setShowWind={setShowWind}
+          showHumidity={showHumidity}
+          setShowHumidity={setShowHumidity}
+          showSunriseSunset={showSunriseSunset}
+          setShowSunriseSunset={setShowSunriseSunset}
+        />
       </div>
       
-      <div className="h-80 w-full">
-        <ChartContainer config={chartConfig} className="h-full w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <defs>
-                <linearGradient id="temperatureGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.05}/>
-                </linearGradient>
-                <linearGradient id="rainGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2}/>
-                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.05}/>
-                </linearGradient>
-              </defs>
-              
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                stroke="rgba(255,255,255,0.15)" 
-                vertical={false}
-              />
-              
-              <XAxis 
-                dataKey="time" 
-                stroke="rgba(255,255,255,0.8)"
-                fontSize={12}
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: 'rgba(255,255,255,0.8)' }}
-              />
-              
-              <YAxis 
-                stroke="rgba(255,255,255,0.8)"
-                fontSize={12}
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: 'rgba(255,255,255,0.8)' }}
-                domain={['dataMin - 5', 'dataMax + 5']}
-              />
-              
-              <ChartTooltip 
-                content={<ChartTooltipContent />}
-                contentStyle={{
-                  backgroundColor: 'rgba(0,0,0,0.9)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  borderRadius: '12px',
-                  color: 'white',
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
-                }}
-              />
-              
-              {/* Sunrise Reference Line */}
-              {showSunriseSunset && (
-                <ReferenceLine 
-                  x={sunriseHour} 
-                  stroke="#FFC107" 
-                  strokeWidth={2}
-                  strokeDasharray="8 4"
-                  label={{ 
-                    value: "Sunrise", 
-                    position: "top",
-                    style: { fill: '#FFC107', fontSize: '12px', fontWeight: 'bold' }
-                  }}
-                />
-              )}
-              
-              {/* Sunset Reference Line */}
-              {showSunriseSunset && (
-                <ReferenceLine 
-                  x={sunsetHour} 
-                  stroke="#FF6B35" 
-                  strokeWidth={2}
-                  strokeDasharray="8 4"
-                  label={{ 
-                    value: "Sunset", 
-                    position: "top",
-                    style: { fill: '#FF6B35', fontSize: '12px', fontWeight: 'bold' }
-                  }}
-                />
-              )}
-              
-              {/* Data Lines */}
-              {activeLines.map((line) => line.show && (
-                <Line
-                  key={line.key}
-                  type="monotone"
-                  dataKey={line.key}
-                  stroke={line.color}
-                  strokeWidth={line.strokeWidth}
-                  strokeDasharray={line.strokeDasharray}
-                  dot={{ 
-                    fill: line.color, 
-                    strokeWidth: 2, 
-                    r: line.key === 'temperature' ? 5 : 3,
-                    style: { filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }
-                  }}
-                  activeDot={{ 
-                    r: 7, 
-                    stroke: line.color, 
-                    strokeWidth: 3,
-                    fill: 'white',
-                    style: { filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.4))' }
-                  }}
-                />
-              ))}
-            </ComposedChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-      </div>
+      <WeatherChartCore
+        chartData={chartData}
+        chartConfig={chartConfig}
+        activeLines={activeLines}
+        sunriseHour={sunriseHour}
+        sunsetHour={sunsetHour}
+        showSunriseSunset={showSunriseSunset}
+      />
       
-      {/* Enhanced Legend */}
-      <div className="flex flex-wrap items-center justify-center gap-6 mt-6 p-4 bg-white/5 rounded-xl border border-white/10">
-        {showTemperature && (
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-2 bg-amber-400 rounded-full shadow-sm"></div>
-            <span className="text-sm text-white/90 font-medium">Temperature (°C)</span>
-          </div>
-        )}
-        {showRain && (
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-2 bg-blue-400 rounded-full border-2 border-dashed border-blue-400 shadow-sm"></div>
-            <span className="text-sm text-white/90 font-medium">Rain Chance (%)</span>
-          </div>
-        )}
-        {showWind && (
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-2 bg-emerald-400 rounded-full shadow-sm"></div>
-            <span className="text-sm text-white/90 font-medium">Wind Speed (km/h)</span>
-          </div>
-        )}
-        {showHumidity && (
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-2 bg-purple-400 rounded-full border-2 border-dashed border-purple-400 shadow-sm"></div>
-            <span className="text-sm text-white/90 font-medium">Humidity (%)</span>
-          </div>
-        )}
-        {showSunriseSunset && (
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Sunrise className="w-4 h-4 text-yellow-400" />
-              <span className="text-sm text-white/90 font-medium">
-                {new Date(weather.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Sunset className="w-4 h-4 text-orange-400" />
-              <span className="text-sm text-white/90 font-medium">
-                {weather.sunset}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
+      <ChartLegend
+        showTemperature={showTemperature}
+        showRain={showRain}
+        showWind={showWind}
+        showHumidity={showHumidity}
+        showSunriseSunset={showSunriseSunset}
+        weather={weather}
+      />
     </div>
   );
 };
