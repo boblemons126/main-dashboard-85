@@ -9,7 +9,7 @@ import WeatherHero from '../components/weather/detailed/WeatherHero';
 import WeatherStats from '../components/weather/detailed/WeatherStats';
 import WeatherForecastDetailed from '../components/weather/detailed/WeatherForecastDetailed';
 import WeatherMetrics from '../components/weather/detailed/WeatherMetrics';
-import WeatherHeader from '../components/weather/WeatherHeader';
+import WeatherChart from '../components/weather/detailed/WeatherChart';
 
 const WeatherPage = () => {
   const { weather, loading, error, refetch, handleLocationChange } = useWeatherData();
@@ -107,6 +107,9 @@ const WeatherPage = () => {
 
           {/* Weather Stats Grid */}
           <WeatherStats weather={weather} />
+
+          {/* Weather Chart */}
+          <WeatherChart weather={weather} />
 
           {/* Detailed Metrics */}
           <WeatherMetrics weather={weather} />
