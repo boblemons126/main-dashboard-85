@@ -1,7 +1,8 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Thermometer, Droplets, Wind, Eye, Gauge, Sun, Cloud, CloudRain, CloudSnow, Zap, RefreshCw, Clock, Calendar } from 'lucide-react';
 import { getOpenWeatherData } from '../services/openWeatherService';
+import { useLocationContext } from '../contexts/LocationContext';
+import WeatherHeader from './weather/WeatherHeader';
 
 interface WeatherData {
   temperature: number;
@@ -48,6 +49,7 @@ const OpenWeatherWidget = () => {
   const [showHourly, setShowHourly] = useState(true);
   const forecastScrollRef = useRef<HTMLDivElement>(null);
   const scrollInterval = useRef<NodeJS.Timeout | null>(null);
+  const { setSelectedLocationId } = useLocationContext();
 
   const getWeatherIcon = (condition: string, size: string = "w-8 h-8") => {
     const iconClass = `${size} text-white drop-shadow-md`;
@@ -82,6 +84,12 @@ const OpenWeatherWidget = () => {
     } else {
       return 'from-orange-400 via-orange-500 to-orange-600';
     }
+  };
+
+  const handleLocationChange = (locationId: string | null) => {
+    setSelectedLocationId(locationId);
+    // Re-fetch weather data for the new location
+    fetchWeatherData();
   };
 
   const fetchWeatherData = async () => {
@@ -192,24 +200,12 @@ const OpenWeatherWidget = () => {
       <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-white/5 rounded-full"></div>
       
       <div className="relative z-10">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-start space-x-1 mt-1">
-            <MapPin className="w-4 h-4 mt-0.5" />
-            <div>
-              <div className="font-semibold text-base leading-tight">{weather.location}</div>
-              {weather.county && <div className="text-sm opacity-70">{weather.county}</div>}
-              <div className="text-xs opacity-60 mt-1">OpenWeatherMap</div>
-            </div>
-          </div>
-          <button
-            onClick={handleRefresh}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            title="Refresh weather data"
-          >
-            <RefreshCw className="w-5 h-5" />
-          </button>
-        </div>
+        <WeatherHeader
+          location={weather.location}
+          county={weather.county}
+          onRefresh={handleRefresh}
+          onLocationChange={handleLocationChange}
+        />
 
         {/* Current weather */}
         <div className="flex items-center justify-between mb-6">

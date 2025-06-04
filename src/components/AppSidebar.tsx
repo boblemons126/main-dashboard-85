@@ -1,4 +1,4 @@
-import { Calendar, Home, List, Thermometer, Newspaper, Settings } from 'lucide-react';
+import { Calendar, Home, Wrench, Thermometer, Newspaper, Settings } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -23,9 +23,9 @@ const navigationItems = [
     icon: Calendar,
   },
   {
-    title: 'Lists',
-    url: '/lists',
-    icon: List,
+    title: 'Utilities',
+    url: '/utilities',
+    icon: Wrench,
   },
   {
     title: 'Settings',

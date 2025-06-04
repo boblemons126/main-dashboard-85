@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Cloud, Newspaper, Clock, Thermometer, List, Home } from 'lucide-react';
+import { Calendar, Settings, Newspaper, Clock, Thermometer, List, Home, Grid2x2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import WeatherWidget from './WeatherWidget';
+import WeatherWidget from './weather/WeatherWidget';
 import NewsWidget from './NewsWidget';
 import CalendarWidget from './CalendarWidget';
 import TimeWidget from './TimeWidget';
@@ -29,15 +29,15 @@ const Dashboard = () => {
     },
     {
       icon: <List className="w-5 h-5" />,
-      label: 'Lists & Tasks',
-      value: 'Create',
+      label: 'Essential Tools', 
+      value: 'Utilities',
       color: 'text-blue-400',
       bgColor: 'bg-blue-500/20',
       borderColor: 'border-blue-500/30',
-      linkTo: '/lists'
+      linkTo: '/utilities'
     },
     {
-      icon: <Calendar className="w-5 h-5" />,
+      icon: <Grid2x2 className="w-5 h-5" />,
       label: 'Application List',
       value: 'Apps',
       color: 'text-green-400',
@@ -45,7 +45,7 @@ const Dashboard = () => {
       borderColor: 'border-green-500/30'
     },
     {
-      icon: <Cloud className="w-5 h-5" />,
+      icon: <Settings className="w-5 h-5" />,
       label: 'System Preferences',
       value: 'Settings',
       color: 'text-purple-400',
