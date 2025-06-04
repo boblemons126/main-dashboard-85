@@ -100,7 +100,9 @@ export const getWeatherData = async (latitude: number, longitude: number): Promi
         temperature: Math.round(item.main.temp),
         condition: item.weather[0].main,
         icon: item.weather[0].icon,
-        chanceOfRain: Math.round((item.pop || 0) * 100)
+        chanceOfRain: Math.round((item.pop || 0) * 100),
+        windSpeed: Math.round((item.wind?.speed || 0) * 3.6),
+        humidity: item.main?.humidity || 50
       };
     });
 
@@ -146,6 +148,7 @@ export const getWeatherData = async (latitude: number, longitude: number): Promi
       icon: currentData.weather[0].icon,
       feelsLike: Math.round(currentData.main.feels_like),
       uvIndex: 0,
+      sunrise: currentData.sys.sunrise,
       sunset: new Date(currentData.sys.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
       hourlyForecast: hourlyForecasts,
       dailyForecast: dailyForecasts

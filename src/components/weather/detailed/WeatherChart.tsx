@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, Area, ComposedChart } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, ComposedChart } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../../ui/chart';
 import { WeatherData } from '../../../types/weather';
 import { Toggle } from '../../ui/toggle';
@@ -19,15 +19,16 @@ const WeatherChart: React.FC<WeatherChartProps> = ({ weather }) => {
 
   // Get sunrise and sunset times (convert to hour format for chart)
   const sunriseHour = new Date(weather.sunrise * 1000).getHours();
-  const sunsetHour = new Date(weather.sunset * 1000).getHours();
+  const sunsetTime = weather.sunset.split(':');
+  const sunsetHour = parseInt(sunsetTime[0]);
 
   const chartData = weather.hourlyForecast.map((hour) => ({
     time: hour.hour,
-    timeDisplay: `${hour.hour}:00`,
+    timeDisplay: hour.hour,
     temperature: hour.temperature,
     rain: hour.chanceOfRain,
-    wind: hour.windSpeed || 10, // Fallback if not available
-    humidity: hour.humidity || 50, // Fallback if not available
+    wind: hour.windSpeed || 10,
+    humidity: hour.humidity || 50,
   }));
 
   const chartConfig = {
@@ -135,9 +136,9 @@ const WeatherChart: React.FC<WeatherChartProps> = ({ weather }) => {
                 dataKey="time" 
                 stroke="rgba(255,255,255,0.8)"
                 fontSize={12}
-                tickFormatter={(value) => `${value}:00`}
                 axisLine={false}
                 tickLine={false}
+                tick={{ fill: 'rgba(255,255,255,0.8)' }}
               />
               
               <YAxis 
@@ -145,6 +146,7 @@ const WeatherChart: React.FC<WeatherChartProps> = ({ weather }) => {
                 fontSize={12}
                 axisLine={false}
                 tickLine={false}
+                tick={{ fill: 'rgba(255,255,255,0.8)' }}
                 domain={['dataMin - 5', 'dataMax + 5']}
               />
               
@@ -157,7 +159,6 @@ const WeatherChart: React.FC<WeatherChartProps> = ({ weather }) => {
                   color: 'white',
                   boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
                 }}
-                labelFormatter={(value) => `${value}:00`}
               />
               
               {/* Sunrise Reference Line */}
@@ -169,7 +170,7 @@ const WeatherChart: React.FC<WeatherChartProps> = ({ weather }) => {
                   strokeDasharray="8 4"
                   label={{ 
                     value: "Sunrise", 
-                    position: "topLeft",
+                    position: "top",
                     style: { fill: '#FFC107', fontSize: '12px', fontWeight: 'bold' }
                   }}
                 />
@@ -184,7 +185,7 @@ const WeatherChart: React.FC<WeatherChartProps> = ({ weather }) => {
                   strokeDasharray="8 4"
                   label={{ 
                     value: "Sunset", 
-                    position: "topRight",
+                    position: "top",
                     style: { fill: '#FF6B35', fontSize: '12px', fontWeight: 'bold' }
                   }}
                 />
@@ -256,7 +257,7 @@ const WeatherChart: React.FC<WeatherChartProps> = ({ weather }) => {
             <div className="flex items-center space-x-2">
               <Sunset className="w-4 h-4 text-orange-400" />
               <span className="text-sm text-white/90 font-medium">
-                {new Date(weather.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {weather.sunset}
               </span>
             </div>
           </div>

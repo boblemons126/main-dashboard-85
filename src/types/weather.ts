@@ -14,6 +14,7 @@ export interface WeatherData {
   feelsLike: number;
   uvIndex: number;
   sunset: string;
+  sunrise: number; // Add sunrise as timestamp
   hourlyForecast: HourlyForecast[];
   dailyForecast: DailyForecast[];
 }
@@ -25,6 +26,8 @@ export interface HourlyForecast {
   condition: string;
   icon: string;
   chanceOfRain: number;
+  windSpeed?: number; // Add optional windSpeed
+  humidity?: number; // Add optional humidity
 }
 
 export interface DailyForecast {
