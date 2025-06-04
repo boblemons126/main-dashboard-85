@@ -2,12 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, Cloud, Newspaper, Clock, Thermometer, List, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WeatherWidget from './WeatherWidget';
-import OpenWeatherWidget from './OpenWeatherWidget';
-import WeatherApiWidget from './WeatherApiWidget';
-import ApplicationsList from './ApplicationsList';
-import TimeWidget from './TimeWidget';
-import CalendarWidget from './CalendarWidget';
 import NewsWidget from './NewsWidget';
+import CalendarWidget from './CalendarWidget';
+import TimeWidget from './TimeWidget';
+import ApplicationsList from './ApplicationsList';
 
 const Dashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -126,7 +124,7 @@ const Dashboard = () => {
               <CalendarWidget />
             </div>
 
-            {/* Original Weather Widget */}
+            {/* Weather Widget */}
             <div className="lg:col-span-1">
               <WeatherWidget />
             </div>
@@ -134,19 +132,6 @@ const Dashboard = () => {
             {/* News Widget - Takes up remaining space */}
             <div className="lg:col-span-3 xl:col-span-1">
               <NewsWidget />
-            </div>
-          </div>
-
-          {/* Additional Weather Widgets Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-            {/* OpenWeatherMap Widget */}
-            <div>
-              <OpenWeatherWidget />
-            </div>
-
-            {/* WeatherAPI Widget */}
-            <div>
-              <WeatherApiWidget />
             </div>
           </div>
 

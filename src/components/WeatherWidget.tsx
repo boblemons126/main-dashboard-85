@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Thermometer, Droplets, Wind, Eye, Gauge, Sun, Cloud, CloudRain, CloudSnow, Zap, RefreshCw, Clock, Calendar, ChevronDown } from 'lucide-react';
+import { MapPin, Thermometer, Droplets, Wind, Eye, Gauge, Sun, Cloud, CloudRain, CloudSnow, Zap, RefreshCw, Clock, Calendar } from 'lucide-react';
 import { getWeatherData } from '../services/weather';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface WeatherData {
   temperature: number;
@@ -45,32 +39,14 @@ interface WeatherData {
   windDirection: string;
 }
 
-interface SavedLocation {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-}
-
 const WeatherWidget = () => {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [showHourly, setShowHourly] = useState(true);
-  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<SavedLocation | null>(null);
   const forecastScrollRef = useRef<HTMLDivElement>(null);
   const scrollInterval = useRef<NodeJS.Timeout | null>(null);
-
-  // Load saved locations from localStorage on component mount
-  useEffect(() => {
-    const saved = localStorage.getItem('weatherLocations');
-    if (saved) {
-      const locations = JSON.parse(saved);
-      setSavedLocations(locations);
-    }
-  }, []);
 
   const getWeatherIcon = (condition: string, size: string = "w-8 h-8") => {
     const iconClass = `${size} text-white drop-shadow-md`;
@@ -107,38 +83,25 @@ const WeatherWidget = () => {
     }
   };
 
-  const fetchWeatherData = async (location?: SavedLocation) => {
+  const fetchWeatherData = async () => {
     setLoading(true);
     setError(null);
     try {
-      let latitude: number, longitude: number;
-      
-      if (location) {
-        latitude = location.latitude;
-        longitude = location.longitude;
-      } else {
-        // Check if geolocation is available
-        if (!navigator.geolocation) {
-          throw new Error('Geolocation is not supported by your browser');
-        }
-
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(
-            resolve,
-            reject,
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 0  // Force a new position request
-            }
-          );
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          timeout: 10000,
+          enableHighAccuracy: true,
+          maximumAge: 300000
         });
-        
-        latitude = position.coords.latitude;
-        longitude = position.coords.longitude;
-      }
-      
-      console.log('Fetching weather for location:', { latitude, longitude });
+      });
+      const {
+        latitude,
+        longitude
+      } = position.coords;
+      console.log('Fetching weather for location:', {
+        latitude,
+        longitude
+      });
       const weatherData = await getWeatherData(latitude, longitude);
       console.log('Weather data received:', weatherData);
       setWeather(weatherData);
@@ -146,15 +109,7 @@ const WeatherWidget = () => {
     } catch (error) {
       console.error('Error fetching weather:', error);
       if (error instanceof GeolocationPositionError) {
-        if (error.code === 1) {
-          setError('Location access was denied. Please enable location services in your browser settings.');
-        } else if (error.code === 2) {
-          setError('Unable to determine your location. Please try again.');
-        } else if (error.code === 3) {
-          setError('Location request timed out. Please try again.');
-        } else {
-          setError('Location access denied. Please enable location services.');
-        }
+        setError('Location access denied. Please enable location services.');
       } else if (error instanceof Error) {
         setError(error.message);
       } else {
@@ -165,23 +120,13 @@ const WeatherWidget = () => {
     }
   };
 
-  const handleLocationSelect = (location: SavedLocation) => {
-    setSelectedLocation(location);
-    fetchWeatherData(location);
-  };
-
-  const handleCurrentLocationSelect = () => {
-    setSelectedLocation(null);
-    fetchWeatherData();
-  };
-
   const handleRefresh = () => {
-    fetchWeatherData(selectedLocation || undefined);
+    fetchWeatherData();
   };
 
   useEffect(() => {
     fetchWeatherData();
-    const interval = setInterval(() => fetchWeatherData(selectedLocation || undefined), 600000);
+    const interval = setInterval(fetchWeatherData, 600000);
     return () => clearInterval(interval);
   }, []);
 
@@ -205,8 +150,7 @@ const WeatherWidget = () => {
   };
 
   if (loading) {
-    return (
-      <div className="bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-xl">
+    return <div className="bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-xl">
         <div className="animate-pulse">
           <div className="flex items-center justify-between mb-4">
             <div className="h-6 bg-white/20 rounded w-24"></div>
@@ -220,82 +164,41 @@ const WeatherWidget = () => {
           </div>
           <div className="h-20 bg-white/20 rounded"></div>
         </div>
-      </div>
-    );
+      </div>;
   }
 
   if (error) {
-    return (
-      <div className="bg-gradient-to-br from-red-400 via-red-500 to-red-600 rounded-2xl p-6 text-white shadow-xl">
+    return <div className="bg-gradient-to-br from-red-400 via-red-500 to-red-600 rounded-2xl p-6 text-white shadow-xl">
         <div className="text-center">
           <div className="text-xl font-bold mb-2">Weather Unavailable</div>
           <div className="text-sm opacity-90 mb-4">{error}</div>
-          <button
-            onClick={handleRefresh}
-            className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 mx-auto"
-          >
+          <button onClick={handleRefresh} className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 mx-auto">
             <RefreshCw className="w-4 h-4" />
             <span>Retry</span>
           </button>
         </div>
-      </div>
-    );
+      </div>;
   }
 
   if (!weather) return null;
 
-  return (
-    <div className={`bg-gradient-to-br ${getGradientByCondition(weather.condition)} rounded-2xl p-6 text-white shadow-xl relative overflow-hidden`}>
+  return <div className={`bg-gradient-to-br ${getGradientByCondition(weather.condition)} rounded-2xl p-6 text-white shadow-xl relative overflow-hidden`}>
       {/* Background decoration */}
       <div className="absolute inset-0 bg-black/10"></div>
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 rounded-full"></div>
       <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-white/5 rounded-full"></div>
       
       <div className="relative z-10">
-        {/* Header with Location Dropdown */}
+        {/* Header */}
         <div className="flex items-start justify-between mb-6">
-          <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-start space-x-1 mt-1 hover:bg-white/10 rounded-lg p-2 transition-colors">
-              <MapPin className="w-4 h-4 mt-0.5" />
-              <div className="text-left">
-                <div className="font-semibold text-base leading-tight flex items-center space-x-1">
-                  <span>{weather.location}</span>
-                  <ChevronDown className="w-3 h-3" />
-                </div>
-                {weather.county && <div className="text-sm opacity-70">{weather.county}</div>}
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-white/95 backdrop-blur-sm border-white/20">
-              <DropdownMenuItem 
-                onClick={handleCurrentLocationSelect}
-                className="cursor-pointer hover:bg-blue-100/50"
-              >
-                <MapPin className="w-4 h-4 mr-2" />
-                Current Location
-              </DropdownMenuItem>
-              {savedLocations.map((location) => (
-                <DropdownMenuItem 
-                  key={location.id}
-                  onClick={() => handleLocationSelect(location)}
-                  className="cursor-pointer hover:bg-blue-100/50"
-                >
-                  <MapPin className="w-4 h-4 mr-2" />
-                  {location.name}
-                </DropdownMenuItem>
-              ))}
-              {savedLocations.length === 0 && (
-                <DropdownMenuItem disabled className="text-gray-500">
-                  No saved locations
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <button
-            onClick={handleRefresh}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            title="Refresh weather data"
-          >
+          <div className="flex items-start space-x-1 mt-1">
+            <MapPin className="w-4 h-4 mt-0.5" />
+            <div>
+              <div className="font-semibold text-base leading-tight">{weather.location}</div>
+              {weather.county && <div className="text-sm opacity-70">{weather.county}</div>}
+            </div>
+          </div>
+          <button onClick={handleRefresh} className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Refresh weather data">
             <RefreshCw className="w-5 h-5" />
           </button>
         </div>
@@ -322,7 +225,7 @@ const WeatherWidget = () => {
           <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
             <Wind className="w-5 h-5 mx-auto mb-1" />
             <div className="text-xs opacity-80">Wind</div>
-            <div className="font-semibold">{weather.windSpeed} mph</div>
+            <div className="font-semibold my-[8px]">{weather.windSpeed} mph</div>
             <div className="text-xs opacity-70 -mt-1">{weather.windDirection}</div>
           </div>
           <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
@@ -386,8 +289,7 @@ const WeatherWidget = () => {
             Last updated: {lastUpdated.toLocaleTimeString()}
           </div>}
       </div>
-    </div>
-  );
+    </div>;
 };
 
 export default WeatherWidget;
