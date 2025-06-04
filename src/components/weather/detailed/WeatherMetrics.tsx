@@ -1,12 +1,11 @@
+
 import React from 'react';
-import { TrendingUp, TrendingDown, Activity, Gauge } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { WeatherData } from '../../../types/weather';
 
 interface WeatherMetricsProps {
   weather: WeatherData;
 }
-
-const kmToMiles = (km: number) => km * 0.621371;
 
 const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
   const getComfortLevel = (temp: number, humidity: number) => {
@@ -39,15 +38,15 @@ const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
           </div>
         </div>
 
-        {/* Atmospheric Pressure */}
+        {/* UV Index */}
         <div className="bg-white/10 rounded-xl p-6">
           <div className="flex items-center space-x-3 mb-4">
-            <Gauge className="w-6 h-6 text-blue-400" />
-            <h3 className="text-lg font-semibold text-white">Pressure</h3>
+            <div className="w-6 h-6 bg-yellow-400 rounded-full"></div>
+            <h3 className="text-lg font-semibold text-white">UV Index</h3>
           </div>
-          <div className="text-2xl font-bold text-white mb-2">{weather.pressure || 'N/A'} hPa</div>
+          <div className="text-2xl font-bold text-white mb-2">{weather.uvIndex || 'N/A'}</div>
           <div className="text-sm text-white/70">
-            Atmospheric pressure
+            {weather.uvIndex ? 'Moderate exposure risk' : 'Data unavailable'}
           </div>
         </div>
 
@@ -59,7 +58,7 @@ const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
           </div>
           <div className="text-2xl font-bold text-green-400 mb-2">Good</div>
           <div className="text-sm text-white/70">
-            Based on visibility: {kmToMiles(weather.visibility).toFixed(1)} miles
+            Based on visibility: {weather.visibility} km
           </div>
         </div>
       </div>
@@ -71,7 +70,6 @@ const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
           Currently experiencing {weather.description.toLowerCase()} with a temperature of {weather.temperature}°C. 
           Winds are coming from the {weather.windDirection.toLowerCase()} at {weather.windSpeed} mph. 
           Humidity levels are at {weather.humidity}%, creating {comfort.level.toLowerCase()} comfort conditions.
-          Visibility is {kmToMiles(weather.visibility).toFixed(1)} miles.
           {weather.sunset && ` Sunset is expected at ${weather.sunset}.`}
         </p>
       </div>

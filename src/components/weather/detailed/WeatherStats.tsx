@@ -1,22 +1,11 @@
+
 import React from 'react';
-import { Droplets, Wind, Eye, Gauge, Sun, Thermometer, Sunrise as SunriseIcon, Sunset as SunsetIcon } from 'lucide-react';
+import { Droplets, Wind, Eye, Gauge, Sun, Thermometer } from 'lucide-react';
 import { WeatherData } from '../../../types/weather';
 
 interface WeatherStatsProps {
   weather: WeatherData;
 }
-
-const kmToMiles = (km: number) => km * 0.621371;
-
-const formatTime = (timestamp: number) => {
-  const date = new Date(timestamp * 1000); // Convert seconds to milliseconds
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  const formattedHours = hours % 12 || 12; // Convert 0 to 12 for 12-hour format
-  const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
-  return `${formattedHours}:${formattedMinutes} ${ampm}`;
-};
 
 const WeatherStats: React.FC<WeatherStatsProps> = ({ weather }) => {
   const stats = [
@@ -30,21 +19,28 @@ const WeatherStats: React.FC<WeatherStatsProps> = ({ weather }) => {
     {
       icon: Wind,
       label: 'Wind Speed',
-      value: `${kmToMiles(weather.windSpeed).toFixed(1)} mph`,
+      value: `${weather.windSpeed} mph`,
       description: weather.windDirection,
       color: 'from-green-400 to-green-600'
     },
     {
       icon: Eye,
       label: 'Visibility',
-      value: `${kmToMiles(weather.visibility).toFixed(1)} miles`,
+      value: `${weather.visibility} km`,
       description: 'Clear visibility',
       color: 'from-purple-400 to-purple-600'
     },
     {
-      icon: SunriseIcon,
-      label: 'Sunrise',
-      value: `${formatTime(weather.sunrise)}`,
+      icon: Gauge,
+      label: 'Pressure',
+      value: `${weather.pressure} hPa`,
+      description: 'Atmospheric pressure',
+      color: 'from-orange-400 to-orange-600'
+    },
+    {
+      icon: Sun,
+      label: 'Sunset',
+      value: weather.sunset,
       description: 'Today',
       color: 'from-yellow-400 to-yellow-600'
     },
@@ -54,13 +50,6 @@ const WeatherStats: React.FC<WeatherStatsProps> = ({ weather }) => {
       value: `${weather.feelsLike}°`,
       description: 'Apparent temperature',
       color: 'from-red-400 to-red-600'
-    },
-    {
-      icon: SunsetIcon,
-      label: 'Sunset',
-      value: weather.sunset,
-      description: 'Today',
-      color: 'from-orange-400 to-orange-600'
     }
   ];
 
