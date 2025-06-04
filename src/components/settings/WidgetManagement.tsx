@@ -1,11 +1,12 @@
-
 import React, { useState } from 'react';
-import { Plus, Eye, EyeOff, Settings, Trash2, GripVertical } from 'lucide-react';
+import { Plus, Eye, EyeOff, Settings as SettingsIcon, Trash2, GripVertical } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useSettings } from '@/contexts/SettingsContext';
+import WeatherSettings from './widgets/WeatherSettings';
 
 interface Widget {
   id: string;
@@ -23,70 +24,17 @@ interface WidgetManagementProps {
 const WidgetManagement: React.FC<WidgetManagementProps> = ({ onSettingsChange }) => {
   const { settings, updateWidgetSettings } = useSettings();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-
-  const widgetDefinitions: Widget[] = [
-    {
-      id: 'weather',
-      name: 'Weather Widget',
-      description: 'Display current weather and forecast',
-      enabled: settings.widgets.find(w => w.id === 'weather')?.enabled || false,
-      category: 'Information',
-      configurable: true
-    },
-    {
-      id: 'calendar',
-      name: 'Calendar Widget',
-      description: 'Show upcoming events and appointments',
-      enabled: settings.widgets.find(w => w.id === 'calendar')?.enabled || false,
-      category: 'Productivity',
-      configurable: true
-    },
-    {
-      id: 'news',
-      name: 'News Widget',
-      description: 'Latest news and headlines',
-      enabled: settings.widgets.find(w => w.id === 'news')?.enabled || false,
-      category: 'Information',
-      configurable: true
-    },
-    {
-      id: 'time',
-      name: 'Time Widget',
-      description: 'Current time and timezone',
-      enabled: settings.widgets.find(w => w.id === 'time')?.enabled || false,
-      category: 'Utility',
-      configurable: false
-    },
-    {
-      id: 'traffic',
-      name: 'Traffic Widget',
-      description: 'Real-time traffic information',
-      enabled: settings.widgets.find(w => w.id === 'traffic')?.enabled || false,
-      category: 'Information',
-      configurable: true
-    },
-    {
-      id: 'stocks',
-      name: 'Stock Market Widget',
-      description: 'Track your favorite stocks',
-      enabled: settings.widgets.find(w => w.id === 'stocks')?.enabled || false,
-      category: 'Finance',
-      configurable: true
-    }
-  ];
-
-  const categories = ['all', 'Information', 'Productivity', 'Utility', 'Finance'];
+  const [configureWidget, setConfigureWidget] = useState<string | null>(null);
 
   const toggleWidget = (widgetId: string) => {
-    const currentWidget = settings.widgets.find(w => w.id === widgetId);
     const updatedWidgets = settings.widgets.map(widget => 
       widget.id === widgetId 
         ? { ...widget, enabled: !widget.enabled }
         : widget
     );
     
-    // If widget doesn't exist, add it
-    if (!currentWidget) {
+    // If widget doesn't exist in settings, add it
+    if (!settings.widgets.find(w => w.id === widgetId)) {
       updatedWidgets.push({
         id: widgetId,
         enabled: true,
@@ -97,6 +45,70 @@ const WidgetManagement: React.FC<WidgetManagementProps> = ({ onSettingsChange })
     updateWidgetSettings(updatedWidgets);
     onSettingsChange();
   };
+
+  // Function to render widget settings based on widget ID
+  const renderWidgetSettings = (widgetId: string) => {
+    switch (widgetId) {
+      case 'weather':
+        return <WeatherSettings onSettingsChange={onSettingsChange} />;
+      // Add cases for other widgets here
+      default:
+        return null;
+    }
+  };
+
+  const widgetDefinitions: Widget[] = [
+    {
+      id: 'weather',
+      name: 'Weather Widget',
+      description: 'Display current weather and forecast',
+      enabled: settings.widgets.find(w => w.id === 'weather')?.enabled ?? true,
+      category: 'Information',
+      configurable: true
+    },
+    {
+      id: 'calendar',
+      name: 'Calendar Widget',
+      description: 'Show upcoming events and appointments',
+      enabled: settings.widgets.find(w => w.id === 'calendar')?.enabled ?? true,
+      category: 'Productivity',
+      configurable: true
+    },
+    {
+      id: 'news',
+      name: 'News Widget',
+      description: 'Latest news and headlines',
+      enabled: settings.widgets.find(w => w.id === 'news')?.enabled ?? true,
+      category: 'Information',
+      configurable: true
+    },
+    {
+      id: 'time',
+      name: 'Time Widget',
+      description: 'Current time and timezone',
+      enabled: settings.widgets.find(w => w.id === 'time')?.enabled ?? true,
+      category: 'Utility',
+      configurable: false
+    },
+    {
+      id: 'traffic',
+      name: 'Traffic Widget',
+      description: 'Real-time traffic information',
+      enabled: settings.widgets.find(w => w.id === 'traffic')?.enabled ?? false,
+      category: 'Information',
+      configurable: true
+    },
+    {
+      id: 'stocks',
+      name: 'Stock Market Widget',
+      description: 'Track your favorite stocks',
+      enabled: settings.widgets.find(w => w.id === 'stocks')?.enabled ?? false,
+      category: 'Finance',
+      configurable: true
+    }
+  ];
+
+  const categories = ['all', 'Information', 'Productivity', 'Utility', 'Finance'];
 
   const filteredWidgets = selectedCategory === 'all' 
     ? widgetDefinitions 
@@ -166,8 +178,9 @@ const WidgetManagement: React.FC<WidgetManagementProps> = ({ onSettingsChange })
                     size="sm" 
                     variant="outline"
                     className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                    onClick={() => setConfigureWidget(widget.id)}
                   >
-                    <Settings className="w-4 h-4" />
+                    <SettingsIcon className="w-4 h-4" />
                   </Button>
                 )}
                 
@@ -195,6 +208,16 @@ const WidgetManagement: React.FC<WidgetManagementProps> = ({ onSettingsChange })
           ))}
         </CardContent>
       </Card>
+
+      {/* Widget Settings Dialog */}
+      <Dialog open={configureWidget !== null} onOpenChange={() => setConfigureWidget(null)}>
+        <DialogContent className="bg-slate-900 border-white/10 text-white max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Widget Settings</DialogTitle>
+          </DialogHeader>
+          {configureWidget && renderWidgetSettings(configureWidget)}
+        </DialogContent>
+      </Dialog>
 
       {/* Widget Order */}
       <Card className="bg-white/5 backdrop-blur-md border-white/10">

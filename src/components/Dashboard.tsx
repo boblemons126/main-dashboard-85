@@ -6,9 +6,11 @@ import NewsWidget from './NewsWidget';
 import CalendarWidget from './CalendarWidget';
 import TimeWidget from './TimeWidget';
 import ApplicationsList from './ApplicationsList';
+import { useSettings } from '@/contexts/SettingsContext';
 
 const Dashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const { settings } = useSettings();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -16,6 +18,12 @@ const Dashboard = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Helper function to check if a widget is enabled
+  const isWidgetEnabled = (widgetId: string) => {
+    const widget = settings.widgets.find(w => w.id === widgetId);
+    return widget?.enabled ?? true; // Default to true for backwards compatibility
+  };
 
   const statsData = [
     {
@@ -50,7 +58,8 @@ const Dashboard = () => {
       value: 'Settings',
       color: 'text-purple-400',
       bgColor: 'bg-purple-500/20',
-      borderColor: 'border-purple-500/30'
+      borderColor: 'border-purple-500/30',
+      linkTo: '/settings'
     }
   ];
 
@@ -71,7 +80,7 @@ const Dashboard = () => {
                   <p className="text-blue-200">Everyday Living Assistant - ELA</p>
                 </div>
               </div>
-              <TimeWidget currentTime={currentTime} />
+              {isWidgetEnabled('time') && <TimeWidget currentTime={currentTime} />}
             </div>
           </header>
 
@@ -120,19 +129,25 @@ const Dashboard = () => {
           {/* Main Dashboard Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8">
             {/* Calendar Widget - Takes up 2 columns on larger screens */}
-            <div className="lg:col-span-2">
-              <CalendarWidget />
-            </div>
+            {isWidgetEnabled('calendar') && (
+              <div className="lg:col-span-2">
+                <CalendarWidget />
+              </div>
+            )}
 
             {/* Weather Widget */}
-            <div className="lg:col-span-1">
-              <WeatherWidget />
-            </div>
+            {isWidgetEnabled('weather') && (
+              <div className="lg:col-span-1">
+                <WeatherWidget />
+              </div>
+            )}
 
             {/* News Widget - Takes up remaining space */}
-            <div className="lg:col-span-3 xl:col-span-1">
-              <NewsWidget />
-            </div>
+            {isWidgetEnabled('news') && (
+              <div className="lg:col-span-3 xl:col-span-1">
+                <NewsWidget />
+              </div>
+            )}
           </div>
 
           {/* Applications List */}
