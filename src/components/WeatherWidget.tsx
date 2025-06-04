@@ -13,9 +13,11 @@ import {
   Zap,
   RefreshCw,
   Clock,
-  Calendar
+  Calendar,
+  Search
 } from 'lucide-react';
 import { getWeatherData } from '../services/weather';
+import { convertToCoordinates, convertToWords } from '../services/what3words';
 
 interface WeatherData {
   temperature: number;
@@ -60,6 +62,9 @@ const WeatherWidget = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [showHourly, setShowHourly] = useState(true);
+  const [what3wordsInput, setWhat3wordsInput] = useState('');
+  const [currentWhat3Words, setCurrentWhat3Words] = useState<string | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
 
   const forecastScrollRef = useRef<HTMLDivElement>(null);
   const scrollInterval = useRef<NodeJS.Timeout | null>(null);
@@ -100,27 +105,47 @@ const WeatherWidget = () => {
     }
   };
 
-  const fetchWeatherData = async () => {
+  const fetchWeatherData = async (latitude?: number, longitude?: number) => {
     setLoading(true);
     setError(null);
     
     try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-          resolve,
-          reject,
-          {
-            timeout: 10000,
-            enableHighAccuracy: true,
-            maximumAge: 300000
-          }
-        );
-      });
-
-      const { latitude, longitude } = position.coords;
-      console.log('Fetching weather for location:', { latitude, longitude });
+      let coords;
       
-      const weatherData = await getWeatherData(latitude, longitude);
+      if (latitude !== undefined && longitude !== undefined) {
+        coords = { latitude, longitude };
+      } else {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            resolve,
+            reject,
+            {
+              timeout: 10000,
+              enableHighAccuracy: true,
+              maximumAge: 300000
+            }
+          );
+        });
+        
+        // Convert coordinates to what3words address for more accuracy
+        try {
+          const words = await convertToWords(position.coords.latitude, position.coords.longitude);
+          setCurrentWhat3Words(words);
+          // Convert back to coordinates for more accurate position
+          const accurateCoords = await convertToCoordinates(words);
+          coords = accurateCoords;
+        } catch (error) {
+          console.warn('Failed to use what3words for accurate location, falling back to browser geolocation:', error);
+          coords = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          };
+        }
+      }
+
+      console.log('Fetching weather for location:', coords);
+      
+      const weatherData = await getWeatherData(coords.latitude, coords.longitude);
       console.log('Weather data received:', weatherData);
       
       setWeather(weatherData);
@@ -129,7 +154,7 @@ const WeatherWidget = () => {
     } catch (error) {
       console.error('Error fetching weather:', error);
       if (error instanceof GeolocationPositionError) {
-        setError('Location access denied. Please enable location services.');
+        setError('Location access denied. Please enable location services or use what3words.');
       } else if (error instanceof Error) {
         setError(error.message);
       } else {
@@ -137,6 +162,21 @@ const WeatherWidget = () => {
       }
     } finally {
       setLoading(false);
+      setIsSearching(false);
+    }
+  };
+
+  const handleWhat3WordsSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!what3wordsInput.trim()) return;
+
+    setIsSearching(true);
+    try {
+      const coords = await convertToCoordinates(what3wordsInput.trim());
+      await fetchWeatherData(coords.latitude, coords.longitude);
+    } catch (error) {
+      setError('Invalid what3words address. Please try again.');
+      setIsSearching(false);
     }
   };
 
@@ -196,12 +236,31 @@ const WeatherWidget = () => {
         <div className="text-center">
           <div className="text-xl font-bold mb-2">Weather Unavailable</div>
           <div className="text-sm opacity-90 mb-4">{error}</div>
+          <form onSubmit={handleWhat3WordsSearch} className="mb-4">
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                placeholder="Enter what3words address..."
+                value={what3wordsInput}
+                onChange={(e) => setWhat3wordsInput(e.target.value)}
+                className="bg-white/20 text-white placeholder-white/50 px-4 py-2 rounded-lg flex-1 focus:outline-none focus:ring-2 focus:ring-white/30"
+              />
+              <button
+                type="submit"
+                disabled={isSearching}
+                className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+              >
+                <Search className="w-4 h-4" />
+                <span>{isSearching ? 'Searching...' : 'Search'}</span>
+              </button>
+            </div>
+          </form>
           <button
             onClick={handleRefresh}
             className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 mx-auto"
           >
             <RefreshCw className="w-4 h-4" />
-            <span>Retry</span>
+            <span>Try Again</span>
           </button>
         </div>
       </div>
@@ -218,14 +277,20 @@ const WeatherWidget = () => {
       <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-white/5 rounded-full"></div>
       
       <div className="relative z-10">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-6">
+        {/* Header with what3words search */}
+        <div className="flex flex-col space-y-4 mb-6">
+          <div className="flex items-start justify-between">
           <div className="flex items-start space-x-1 mt-1">
             <MapPin className="w-4 h-4 mt-0.5" />
             <div>
               <div className="font-semibold text-base leading-tight">{weather.location}</div>
               {weather.county && (
                 <div className="text-sm opacity-70">{weather.county}</div>
+              )}
+              {currentWhat3Words && (
+                <div className="text-xs opacity-60 mt-0.5">
+                  what3words: {currentWhat3Words}
+                </div>
               )}
             </div>
           </div>
@@ -236,6 +301,26 @@ const WeatherWidget = () => {
           >
             <RefreshCw className="w-5 h-5" />
           </button>
+          </div>
+          
+          <form onSubmit={handleWhat3WordsSearch} className="w-full">
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                placeholder="Enter what3words address..."
+                value={what3wordsInput}
+                onChange={(e) => setWhat3wordsInput(e.target.value)}
+                className="bg-white/20 text-white placeholder-white/50 px-4 py-2 rounded-lg flex-1 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
+              />
+              <button
+                type="submit"
+                disabled={isSearching}
+                className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            </div>
+          </form>
         </div>
 
         {/* Current weather */}
