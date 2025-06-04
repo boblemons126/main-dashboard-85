@@ -1,11 +1,6 @@
-<<<<<<< HEAD
-import React from 'react';
-import { MapPin } from 'lucide-react';
-=======
 
 import React from 'react';
 import { MapPin, ChevronDown } from 'lucide-react';
->>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
 import {
   Select,
   SelectContent,
@@ -17,19 +12,11 @@ import { useLocationContext } from '../../contexts/LocationContext';
 
 interface LocationDropdownProps {
   currentLocation: string;
-<<<<<<< HEAD
-  currentCounty: string | null;
-=======
->>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
   onLocationChange: (locationId: string | null) => void;
 }
 
 const LocationDropdown: React.FC<LocationDropdownProps> = ({ 
   currentLocation, 
-<<<<<<< HEAD
-  currentCounty, 
-=======
->>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
   onLocationChange 
 }) => {
   const { customLocations, selectedLocationId } = useLocationContext();
@@ -57,37 +44,6 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
         value={selectedLocationId || 'current'} 
         onValueChange={handleValueChange}
       >
-<<<<<<< HEAD
-        <SelectTrigger className="bg-transparent border-none p-0 h-auto text-white hover:bg-white/10 rounded w-fit">
-          <div className="flex flex-col items-start">
-            <SelectValue>
-              <div>
-              <span className="font-semibold text-base leading-tight">{getDisplayValue()}</span>
-                {currentCounty && !selectedLocationId && (
-                  <span className="text-sm opacity-70 ml-1">{currentCounty}</span>
-                )}
-              </div>
-            </SelectValue>
-          </div>
-        </SelectTrigger>
-        <SelectContent className="bg-white/90 backdrop-blur-sm border border-white/20 shadow-lg rounded-lg">
-          <SelectItem value="current" className="cursor-pointer hover:bg-white/20">
-              <div className="flex items-center space-x-2">
-                <MapPin className="w-4 h-4" />
-              <div>
-                <span className="font-medium">{currentLocation}</span>
-                {currentCounty && (
-                  <span className="text-sm text-gray-600 ml-1">{currentCounty}</span>
-                )}
-              </div>
-            </div>
-          </SelectItem>
-          {customLocations.map((location) => (
-            <SelectItem key={location.id} value={location.id} className="cursor-pointer hover:bg-white/20">
-              <div className="flex items-center space-x-2">
-                <MapPin className="w-4 h-4" />
-                <span className="font-medium">{location.name}</span>
-=======
         <SelectTrigger className="bg-transparent border-none p-0 h-auto text-white hover:bg-white/10 rounded">
           <div className="flex items-center space-x-1">
             <SelectValue>
@@ -108,7 +64,6 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
               <div className="flex items-center space-x-2">
                 <MapPin className="w-4 h-4" />
                 <span>{location.name}</span>
->>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
               </div>
             </SelectItem>
           ))}
