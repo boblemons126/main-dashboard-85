@@ -1,23 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  MapPin, 
-  Thermometer, 
-  Droplets, 
-  Wind, 
-  Eye, 
-  Gauge,
-  Sun,
-  Cloud,
-  CloudRain,
-  CloudSnow,
-  Zap,
-  RefreshCw,
-  Clock,
-  Calendar,
-  Search
-} from 'lucide-react';
+import { MapPin, Thermometer, Droplets, Wind, Eye, Gauge, Sun, Cloud, CloudRain, CloudSnow, Zap, RefreshCw, Clock, Calendar } from 'lucide-react';
 import { getWeatherData } from '../services/weather';
-import { convertToCoordinates, convertToWords } from '../services/what3words';
 
 interface WeatherData {
   temperature: number;
@@ -62,16 +45,11 @@ const WeatherWidget = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [showHourly, setShowHourly] = useState(true);
-  const [what3wordsInput, setWhat3wordsInput] = useState('');
-  const [currentWhat3Words, setCurrentWhat3Words] = useState<string | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
-
   const forecastScrollRef = useRef<HTMLDivElement>(null);
   const scrollInterval = useRef<NodeJS.Timeout | null>(null);
 
   const getWeatherIcon = (condition: string, size: string = "w-8 h-8") => {
     const iconClass = `${size} text-white drop-shadow-md`;
-    
     const conditionLower = condition.toLowerCase();
     if (conditionLower.includes('clear') || conditionLower.includes('sunny')) {
       return <Sun className={iconClass} />;
@@ -105,56 +83,33 @@ const WeatherWidget = () => {
     }
   };
 
-  const fetchWeatherData = async (latitude?: number, longitude?: number) => {
+  const fetchWeatherData = async () => {
     setLoading(true);
     setError(null);
-    
     try {
-      let coords;
-      
-      if (latitude !== undefined && longitude !== undefined) {
-        coords = { latitude, longitude };
-      } else {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(
-            resolve,
-            reject,
-            {
-              timeout: 10000,
-              enableHighAccuracy: true,
-              maximumAge: 300000
-            }
-          );
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          timeout: 10000,
+          enableHighAccuracy: true,
+          maximumAge: 300000
         });
-        
-        // Convert coordinates to what3words address for more accuracy
-        try {
-          const words = await convertToWords(position.coords.latitude, position.coords.longitude);
-          setCurrentWhat3Words(words);
-          // Convert back to coordinates for more accurate position
-          const accurateCoords = await convertToCoordinates(words);
-          coords = accurateCoords;
-        } catch (error) {
-          console.warn('Failed to use what3words for accurate location, falling back to browser geolocation:', error);
-          coords = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          };
-        }
-      }
-
-      console.log('Fetching weather for location:', coords);
-      
-      const weatherData = await getWeatherData(coords.latitude, coords.longitude);
+      });
+      const {
+        latitude,
+        longitude
+      } = position.coords;
+      console.log('Fetching weather for location:', {
+        latitude,
+        longitude
+      });
+      const weatherData = await getWeatherData(latitude, longitude);
       console.log('Weather data received:', weatherData);
-      
       setWeather(weatherData);
       setLastUpdated(new Date());
-      
     } catch (error) {
       console.error('Error fetching weather:', error);
       if (error instanceof GeolocationPositionError) {
-        setError('Location access denied. Please enable location services or use what3words.');
+        setError('Location access denied. Please enable location services.');
       } else if (error instanceof Error) {
         setError(error.message);
       } else {
@@ -162,21 +117,6 @@ const WeatherWidget = () => {
       }
     } finally {
       setLoading(false);
-      setIsSearching(false);
-    }
-  };
-
-  const handleWhat3WordsSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!what3wordsInput.trim()) return;
-
-    setIsSearching(true);
-    try {
-      const coords = await convertToCoordinates(what3wordsInput.trim());
-      await fetchWeatherData(coords.latitude, coords.longitude);
-    } catch (error) {
-      setError('Invalid what3words address. Please try again.');
-      setIsSearching(false);
     }
   };
 
@@ -186,7 +126,6 @@ const WeatherWidget = () => {
 
   useEffect(() => {
     fetchWeatherData();
-    
     const interval = setInterval(fetchWeatherData, 600000);
     return () => clearInterval(interval);
   }, []);
@@ -197,7 +136,7 @@ const WeatherWidget = () => {
       if (forecastScrollRef.current) {
         forecastScrollRef.current.scrollBy({
           left: direction === 'left' ? -10 : 10,
-          behavior: 'smooth',
+          behavior: 'smooth'
         });
       }
     }, 16); // ~60fps
@@ -211,8 +150,7 @@ const WeatherWidget = () => {
   };
 
   if (loading) {
-    return (
-      <div className="bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-xl">
+    return <div className="bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-xl">
         <div className="animate-pulse">
           <div className="flex items-center justify-between mb-4">
             <div className="h-6 bg-white/20 rounded w-24"></div>
@@ -226,101 +164,43 @@ const WeatherWidget = () => {
           </div>
           <div className="h-20 bg-white/20 rounded"></div>
         </div>
-      </div>
-    );
+      </div>;
   }
 
   if (error) {
-    return (
-      <div className="bg-gradient-to-br from-red-400 via-red-500 to-red-600 rounded-2xl p-6 text-white shadow-xl">
+    return <div className="bg-gradient-to-br from-red-400 via-red-500 to-red-600 rounded-2xl p-6 text-white shadow-xl">
         <div className="text-center">
           <div className="text-xl font-bold mb-2">Weather Unavailable</div>
           <div className="text-sm opacity-90 mb-4">{error}</div>
-          <form onSubmit={handleWhat3WordsSearch} className="mb-4">
-            <div className="flex items-center space-x-2">
-              <input
-                type="text"
-                placeholder="Enter what3words address..."
-                value={what3wordsInput}
-                onChange={(e) => setWhat3wordsInput(e.target.value)}
-                className="bg-white/20 text-white placeholder-white/50 px-4 py-2 rounded-lg flex-1 focus:outline-none focus:ring-2 focus:ring-white/30"
-              />
-              <button
-                type="submit"
-                disabled={isSearching}
-                className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
-              >
-                <Search className="w-4 h-4" />
-                <span>{isSearching ? 'Searching...' : 'Search'}</span>
-              </button>
-            </div>
-          </form>
-          <button
-            onClick={handleRefresh}
-            className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 mx-auto"
-          >
+          <button onClick={handleRefresh} className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 mx-auto">
             <RefreshCw className="w-4 h-4" />
-            <span>Try Again</span>
+            <span>Retry</span>
           </button>
         </div>
-      </div>
-    );
+      </div>;
   }
 
   if (!weather) return null;
 
-  return (
-    <div className={`bg-gradient-to-br ${getGradientByCondition(weather.condition)} rounded-2xl p-6 text-white shadow-xl relative overflow-hidden`}>
+  return <div className={`bg-gradient-to-br ${getGradientByCondition(weather.condition)} rounded-2xl p-6 text-white shadow-xl relative overflow-hidden`}>
       {/* Background decoration */}
       <div className="absolute inset-0 bg-black/10"></div>
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 rounded-full"></div>
       <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-white/5 rounded-full"></div>
       
       <div className="relative z-10">
-        {/* Header with what3words search */}
-        <div className="flex flex-col space-y-4 mb-6">
-          <div className="flex items-start justify-between">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-6">
           <div className="flex items-start space-x-1 mt-1">
             <MapPin className="w-4 h-4 mt-0.5" />
             <div>
               <div className="font-semibold text-base leading-tight">{weather.location}</div>
-              {weather.county && (
-                <div className="text-sm opacity-70">{weather.county}</div>
-              )}
-              {currentWhat3Words && (
-                <div className="text-xs opacity-60 mt-0.5">
-                  what3words: {currentWhat3Words}
-                </div>
-              )}
+              {weather.county && <div className="text-sm opacity-70">{weather.county}</div>}
             </div>
           </div>
-          <button
-            onClick={handleRefresh}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            title="Refresh weather data"
-          >
+          <button onClick={handleRefresh} className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Refresh weather data">
             <RefreshCw className="w-5 h-5" />
           </button>
-          </div>
-          
-          <form onSubmit={handleWhat3WordsSearch} className="w-full">
-            <div className="flex items-center space-x-2">
-              <input
-                type="text"
-                placeholder="Enter what3words address..."
-                value={what3wordsInput}
-                onChange={(e) => setWhat3wordsInput(e.target.value)}
-                className="bg-white/20 text-white placeholder-white/50 px-4 py-2 rounded-lg flex-1 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
-              />
-              <button
-                type="submit"
-                disabled={isSearching}
-                className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors"
-              >
-                <Search className="w-4 h-4" />
-              </button>
-            </div>
-          </form>
         </div>
 
         {/* Current weather */}
@@ -337,41 +217,31 @@ const WeatherWidget = () => {
 
         {/* Weather details */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center flex flex-col items-center justify-center">
-            <Droplets className="w-5 h-5 mb-1" />
+          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
+            <Droplets className="w-5 h-5 mx-auto mb-1" />
             <div className="text-xs opacity-80">Humidity</div>
-            <div className="font-semibold">{weather.humidity}%</div>
+            <div className="font-semibold my-[8px]">{weather.humidity}%</div>
           </div>
-          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center flex flex-col items-center justify-center">
-            <Wind className="w-5 h-5 mb-1" />
+          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
+            <Wind className="w-5 h-5 mx-auto mb-1" />
             <div className="text-xs opacity-80">Wind</div>
-            <div className="font-semibold">{weather.windSpeed} mph</div>
-            <div className="text-[0.65em] text-white/60 font-normal mt-0.5">{weather.windDirection}</div>
+            <div className="font-semibold my-[8px]">{weather.windSpeed} mph</div>
+            <div className="text-xs opacity-70 -mt-1">{weather.windDirection}</div>
           </div>
-          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center flex flex-col items-center justify-center">
-            <Sun className="w-5 h-5 mb-1" />
+          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
+            <Sun className="w-5 h-5 mx-auto mb-1" />
             <div className="text-xs opacity-80">Sunset</div>
-            <div className="font-semibold">{weather && weather.sunset ? weather.sunset : '--'}</div>
+            <div className="font-semibold my-[8px]">{weather && weather.sunset ? weather.sunset : '--'}</div>
           </div>
         </div>
 
         {/* Forecast toggle */}
         <div className="w-fit mx-auto flex bg-white/15 backdrop-blur-sm rounded-lg p-1 mb-3">
-          <button
-            onClick={() => setShowHourly(true)}
-            className={`flex items-center space-x-1 px-3 py-1 rounded text-xs transition-colors ${
-              showHourly ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
-            }`}
-          >
+          <button onClick={() => setShowHourly(true)} className={`flex items-center space-x-1 px-3 py-1 rounded text-xs transition-colors ${showHourly ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'}`}>
             <Clock className="w-3 h-3" />
             <span>Hourly</span>
           </button>
-          <button
-            onClick={() => setShowHourly(false)}
-            className={`flex items-center space-x-1 px-3 py-1 rounded text-xs transition-colors ${
-              !showHourly ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
-            }`}
-          >
+          <button onClick={() => setShowHourly(false)} className={`flex items-center space-x-1 px-3 py-1 rounded text-xs transition-colors ${!showHourly ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'}`}>
             <Calendar className="w-3 h-3" />
             <span>Daily</span>
           </button>
@@ -379,25 +249,17 @@ const WeatherWidget = () => {
 
         {/* Hourly/Daily forecast */}
         <div className="relative">
-          <div
-            ref={forecastScrollRef}
-            className="flex space-x-3 pb-2 overflow-x-auto scrollbar-hide"
-            style={{ scrollBehavior: 'smooth' }}
-          >
-            {showHourly ? (
-              weather.hourlyForecast.slice(0, 8).map((hour, index) => (
-                <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
+          <div ref={forecastScrollRef} className="flex space-x-3 pb-2 overflow-x-auto scrollbar-hide" style={{
+          scrollBehavior: 'smooth'
+        }}>
+            {showHourly ? weather.hourlyForecast.slice(0, 8).map((hour, index) => <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
                   <div className="text-xs opacity-80 mb-1">{hour.hour}</div>
                   <div className="flex justify-center mb-1">
                     {getWeatherIcon(hour.condition, "w-5 h-5")}
                   </div>
                   <div className="text-sm font-semibold mb-1">{hour.temperature}°</div>
                   <div className="text-xs opacity-70">{hour.chanceOfRain}%</div>
-                </div>
-              ))
-            ) : (
-              weather.dailyForecast.slice(0, 7).map((day, index) => (
-                <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
+                </div>) : weather.dailyForecast.slice(0, 7).map((day, index) => <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] flex-shrink-0">
                   <div className="text-xs opacity-80 mb-1">{day.day}</div>
                   <div className="flex justify-center mb-1">
                     {getWeatherIcon(day.condition, "w-5 h-5")}
@@ -407,23 +269,15 @@ const WeatherWidget = () => {
                     <div className="opacity-70">{day.low}°</div>
                   </div>
                   <div className="text-xs opacity-70 mt-1">{day.chanceOfRain}%</div>
-                </div>
-              ))
-            )}
+                </div>)}
           </div>
           {/* Hover zones for auto-scroll */}
-          <div
-            className="absolute left-0 top-0 h-full w-6 z-20 cursor-w-resize"
-            style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.08), transparent)' }}
-            onMouseEnter={() => startScroll('left')}
-            onMouseLeave={stopScroll}
-          />
-          <div
-            className="absolute right-0 top-0 h-full w-6 z-20 cursor-e-resize"
-            style={{ background: 'linear-gradient(to left, rgba(0,0,0,0.08), transparent)' }}
-            onMouseEnter={() => startScroll('right')}
-            onMouseLeave={stopScroll}
-          />
+          <div className="absolute left-0 top-0 h-full w-6 z-20 cursor-w-resize" style={{
+          background: 'linear-gradient(to right, rgba(0,0,0,0.08), transparent)'
+        }} onMouseEnter={() => startScroll('left')} onMouseLeave={stopScroll} />
+          <div className="absolute right-0 top-0 h-full w-6 z-20 cursor-e-resize" style={{
+          background: 'linear-gradient(to left, rgba(0,0,0,0.08), transparent)'
+        }} onMouseEnter={() => startScroll('right')} onMouseLeave={stopScroll} />
         </div>
         <style>{`
           .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -431,14 +285,11 @@ const WeatherWidget = () => {
         `}</style>
 
         {/* Last updated */}
-        {lastUpdated && (
-          <div className="text-xs opacity-60 mt-4 text-center">
+        {lastUpdated && <div className="text-xs opacity-60 mt-4 text-center">
             Last updated: {lastUpdated.toLocaleTimeString()}
-          </div>
-        )}
+          </div>}
       </div>
-    </div>
-  );
+    </div>;
 };
 
 export default WeatherWidget;
