@@ -111,19 +111,29 @@ const WeatherWidget = () => {
     setLoading(true);
     setError(null);
     try {
-      let latitude, longitude;
+      let latitude: number, longitude: number;
       
       if (location) {
         latitude = location.latitude;
         longitude = location.longitude;
       } else {
+        // Check if geolocation is available
+        if (!navigator.geolocation) {
+          throw new Error('Geolocation is not supported by your browser');
+        }
+
         const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            timeout: 10000,
-            enableHighAccuracy: true,
-            maximumAge: 300000
-          });
+          navigator.geolocation.getCurrentPosition(
+            resolve,
+            reject,
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0  // Force a new position request
+            }
+          );
         });
+        
         latitude = position.coords.latitude;
         longitude = position.coords.longitude;
       }
@@ -136,7 +146,15 @@ const WeatherWidget = () => {
     } catch (error) {
       console.error('Error fetching weather:', error);
       if (error instanceof GeolocationPositionError) {
-        setError('Location access denied. Please enable location services.');
+        if (error.code === 1) {
+          setError('Location access was denied. Please enable location services in your browser settings.');
+        } else if (error.code === 2) {
+          setError('Unable to determine your location. Please try again.');
+        } else if (error.code === 3) {
+          setError('Location request timed out. Please try again.');
+        } else {
+          setError('Location access denied. Please enable location services.');
+        }
       } else if (error instanceof Error) {
         setError(error.message);
       } else {
@@ -304,7 +322,7 @@ const WeatherWidget = () => {
           <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
             <Wind className="w-5 h-5 mx-auto mb-1" />
             <div className="text-xs opacity-80">Wind</div>
-            <div className="font-semibold my-[8px]">{weather.windSpeed} mph</div>
+            <div className="font-semibold">{weather.windSpeed} mph</div>
             <div className="text-xs opacity-70 -mt-1">{weather.windDirection}</div>
           </div>
           <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
