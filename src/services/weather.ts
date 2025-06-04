@@ -1,3 +1,4 @@
+
 interface WeatherData {
   temperature: number;
   condition: string;
@@ -35,18 +36,26 @@ interface WeatherData {
   }>;
 }
 
-const getConditionFromIcon = (icon: string): string => {
+const getConditionFromOpenWeatherIcon = (icon: string): string => {
   const iconMap: { [key: string]: string } = {
-    'clear-day': 'Clear',
-    'clear-night': 'Clear',
-    'rain': 'Rain',
-    'snow': 'Snow',
-    'sleet': 'Sleet',
-    'wind': 'Windy',
-    'fog': 'Fog',
-    'cloudy': 'Cloudy',
-    'partly-cloudy-day': 'Partly Cloudy',
-    'partly-cloudy-night': 'Partly Cloudy',
+    '01d': 'Clear',
+    '01n': 'Clear',
+    '02d': 'Partly Cloudy',
+    '02n': 'Partly Cloudy',
+    '03d': 'Cloudy',
+    '03n': 'Cloudy',
+    '04d': 'Cloudy',
+    '04n': 'Cloudy',
+    '09d': 'Rain',
+    '09n': 'Rain',
+    '10d': 'Rain',
+    '10n': 'Rain',
+    '11d': 'Thunder',
+    '11n': 'Thunder',
+    '13d': 'Snow',
+    '13n': 'Snow',
+    '50d': 'Fog',
+    '50n': 'Fog',
   };
   return iconMap[icon] || 'Unknown';
 };
@@ -97,73 +106,105 @@ function degToCompass(num: number) {
 }
 
 export const getWeatherData = async (latitude: number, longitude: number): Promise<WeatherData> => {
-  const apiKey = 'IOSfbJRQf6aandt4MVF84vWA1KNfTDSq'; // You'll need to get this from pirateweather.net
+  const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error('OpenWeather API key is not configured');
+  }
   
   try {
-    // Fetch weather data from Pirate Weather API
-    const response = await fetch(
-      `https://api.pirateweather.net/forecast/${apiKey}/${latitude},${longitude}?units=si`
-    );
+    // Fetch current weather and forecast data from OpenWeather API
+    const [currentResponse, forecastResponse] = await Promise.all([
+      fetch(
+        `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric`
+      ),
+      fetch(
+        `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric`
+      )
+    ]);
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch weather data: ${response.status}`);
+    if (!currentResponse.ok) {
+      throw new Error(`Failed to fetch current weather data: ${currentResponse.status}`);
     }
 
-    const data = await response.json();
-    console.log('Pirate Weather API response:', data);
+    if (!forecastResponse.ok) {
+      throw new Error(`Failed to fetch forecast data: ${forecastResponse.status}`);
+    }
+
+    const currentData = await currentResponse.json();
+    const forecastData = await forecastResponse.json();
+    
+    console.log('OpenWeather current data:', currentData);
+    console.log('OpenWeather forecast data:', forecastData);
 
     // Get location name
     const locationInfo = await getLocationName(latitude, longitude);
 
-    // Process hourly forecast for the rest of the day
-    const currentHour = new Date().getHours();
-    const hourlyForecasts = data.hourly.data.slice(0, 24).map((hour: any, index: number) => {
-      const hourTime = new Date(hour.time * 1000);
+    // Process hourly forecast (OpenWeather gives us 5-day forecast with 3-hour intervals)
+    const hourlyForecasts = forecastData.list.slice(0, 8).map((item: any) => {
+      const itemDate = new Date(item.dt * 1000);
       return {
-        time: hour.time,
-        hour: hourTime.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true }),
-        temperature: Math.round(hour.temperature),
-        condition: getConditionFromIcon(hour.icon),
-        icon: hour.icon,
-        chanceOfRain: Math.round((hour.precipProbability || 0) * 100)
+        time: item.dt,
+        hour: itemDate.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true }),
+        temperature: Math.round(item.main.temp),
+        condition: getConditionFromOpenWeatherIcon(item.weather[0].icon),
+        icon: item.weather[0].icon,
+        chanceOfRain: Math.round((item.pop || 0) * 100)
       };
     });
 
-    // Process daily forecast
-    const dailyForecasts = data.daily.data.slice(0, 7).map((day: any) => {
-      const dayDate = new Date(day.time * 1000);
-      return {
-        date: day.time,
-        day: dayDate.toLocaleDateString('en-US', { weekday: 'short' }),
-        high: Math.round(day.temperatureHigh),
-        low: Math.round(day.temperatureLow),
-        condition: getConditionFromIcon(day.icon),
-        description: getConditionFromIcon(day.icon),
-        icon: day.icon,
-        humidity: Math.round((day.humidity || 0) * 100),
-        windSpeed: Math.round(day.windSpeed || 0),
-        chanceOfRain: Math.round((day.precipProbability || 0) * 100)
-      };
+    // Process daily forecast by grouping forecast data by day
+    const dailyMap = new Map();
+    forecastData.list.forEach((item: any) => {
+      const date = new Date(item.dt * 1000);
+      const dayKey = date.toDateString();
+      
+      if (!dailyMap.has(dayKey)) {
+        dailyMap.set(dayKey, {
+          date: item.dt,
+          day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+          temps: [item.main.temp],
+          condition: getConditionFromOpenWeatherIcon(item.weather[0].icon),
+          description: item.weather[0].description,
+          icon: item.weather[0].icon,
+          humidity: item.main.humidity,
+          windSpeed: Math.round(item.wind.speed * 2.237), // Convert m/s to mph
+          chanceOfRain: Math.round((item.pop || 0) * 100)
+        });
+      } else {
+        const dayData = dailyMap.get(dayKey);
+        dayData.temps.push(item.main.temp);
+      }
     });
 
-    const current = data.currently;
-    const today = data.daily.data[0];
+    const dailyForecasts = Array.from(dailyMap.values()).slice(0, 7).map((day: any) => ({
+      date: day.date,
+      day: day.day,
+      high: Math.round(Math.max(...day.temps)),
+      low: Math.round(Math.min(...day.temps)),
+      condition: day.condition,
+      description: day.description,
+      icon: day.icon,
+      humidity: day.humidity,
+      windSpeed: day.windSpeed,
+      chanceOfRain: day.chanceOfRain
+    }));
 
     return {
-      temperature: Math.round(current.temperature),
-      condition: getConditionFromIcon(current.icon),
-      description: getConditionFromIcon(current.icon),
-      humidity: Math.round((current.humidity || 0) * 100),
-      windSpeed: Math.round((current.windSpeed || 0) * 0.621371), // Convert km/h to mph
-      windDirection: current.windBearing !== undefined ? degToCompass(current.windBearing) : '--',
-      pressure: Math.round(current.pressure || 0),
-      visibility: Math.round((current.visibility || 0) * 1.60934), // Convert miles to km
+      temperature: Math.round(currentData.main.temp),
+      condition: getConditionFromOpenWeatherIcon(currentData.weather[0].icon),
+      description: currentData.weather[0].description,
+      humidity: currentData.main.humidity,
+      windSpeed: Math.round((currentData.wind.speed || 0) * 2.237), // Convert m/s to mph
+      windDirection: currentData.wind.deg !== undefined ? degToCompass(currentData.wind.deg) : '--',
+      pressure: Math.round(currentData.main.pressure || 0),
+      visibility: Math.round((currentData.visibility || 0) / 1000), // Convert meters to km
       location: locationInfo.location,
       county: locationInfo.county,
-      icon: current.icon,
-      feelsLike: Math.round(current.apparentTemperature),
-      uvIndex: Math.round(current.uvIndex || 0),
-      sunset: today && today.sunsetTime ? new Date(today.sunsetTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '--',
+      icon: currentData.weather[0].icon,
+      feelsLike: Math.round(currentData.main.feels_like),
+      uvIndex: 0, // OpenWeather doesn't provide UV index in basic plan
+      sunset: currentData.sys.sunset ? new Date(currentData.sys.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '--',
       hourlyForecast: hourlyForecasts,
       dailyForecast: dailyForecasts
     };
