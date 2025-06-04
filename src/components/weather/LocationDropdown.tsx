@@ -1,11 +1,5 @@
-<<<<<<< HEAD
 import React from 'react';
 import { MapPin } from 'lucide-react';
-=======
-
-import React from 'react';
-import { MapPin, ChevronDown } from 'lucide-react';
->>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
 import {
   Select,
   SelectContent,
@@ -17,19 +11,13 @@ import { useLocationContext } from '../../contexts/LocationContext';
 
 interface LocationDropdownProps {
   currentLocation: string;
-<<<<<<< HEAD
   currentCounty: string | null;
-=======
->>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
   onLocationChange: (locationId: string | null) => void;
 }
 
 const LocationDropdown: React.FC<LocationDropdownProps> = ({ 
   currentLocation, 
-<<<<<<< HEAD
   currentCounty, 
-=======
->>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
   onLocationChange 
 }) => {
   const { customLocations, selectedLocationId } = useLocationContext();
@@ -57,7 +45,6 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
         value={selectedLocationId || 'current'} 
         onValueChange={handleValueChange}
       >
-<<<<<<< HEAD
         <SelectTrigger className="bg-transparent border-none p-0 h-auto text-white hover:bg-white/10 rounded w-fit">
           <div className="flex flex-col items-start">
             <SelectValue>
@@ -87,28 +74,6 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
               <div className="flex items-center space-x-2">
                 <MapPin className="w-4 h-4" />
                 <span className="font-medium">{location.name}</span>
-=======
-        <SelectTrigger className="bg-transparent border-none p-0 h-auto text-white hover:bg-white/10 rounded">
-          <div className="flex items-center space-x-1">
-            <SelectValue>
-              <span className="font-semibold text-base">{getDisplayValue()}</span>
-            </SelectValue>
-            <ChevronDown className="w-3 h-3 opacity-70" />
-          </div>
-        </SelectTrigger>
-        <SelectContent className="bg-white border border-gray-200 shadow-lg">
-          <SelectItem value="current" className="cursor-pointer">
-            <div className="flex items-center space-x-2">
-              <MapPin className="w-4 h-4" />
-              <span>Current Location</span>
-            </div>
-          </SelectItem>
-          {customLocations.map((location) => (
-            <SelectItem key={location.id} value={location.id} className="cursor-pointer">
-              <div className="flex items-center space-x-2">
-                <MapPin className="w-4 h-4" />
-                <span>{location.name}</span>
->>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
               </div>
             </SelectItem>
           ))}
