@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
 import React from 'react';
 import { RefreshCw } from 'lucide-react';
 import LocationDropdown from './LocationDropdown';
@@ -20,9 +24,15 @@ const WeatherHeader: React.FC<WeatherHeaderProps> = ({
       <div className="flex-1">
         <LocationDropdown 
           currentLocation={location}
+<<<<<<< HEAD
           currentCounty={county}
           onLocationChange={onLocationChange}
         />
+=======
+          onLocationChange={onLocationChange}
+        />
+        {county && <div className="text-sm opacity-70 mt-1 ml-6">{county}</div>}
+>>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
       </div>
       <button 
         onClick={onRefresh} 

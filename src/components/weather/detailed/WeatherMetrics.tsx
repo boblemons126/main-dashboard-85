@@ -1,13 +1,22 @@
+<<<<<<< HEAD
 import React from 'react';
 import { TrendingUp, TrendingDown, Activity, Gauge } from 'lucide-react';
+=======
+
+import React from 'react';
+import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
+>>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
 import { WeatherData } from '../../../types/weather';
 
 interface WeatherMetricsProps {
   weather: WeatherData;
 }
 
+<<<<<<< HEAD
 const kmToMiles = (km: number) => km * 0.621371;
 
+=======
+>>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
 const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
   const getComfortLevel = (temp: number, humidity: number) => {
     if (temp >= 20 && temp <= 26 && humidity >= 40 && humidity <= 60) {
@@ -39,6 +48,7 @@ const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
           </div>
         </div>
 
+<<<<<<< HEAD
         {/* Atmospheric Pressure */}
         <div className="bg-white/10 rounded-xl p-6">
           <div className="flex items-center space-x-3 mb-4">
@@ -48,6 +58,17 @@ const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
           <div className="text-2xl font-bold text-white mb-2">{weather.pressure || 'N/A'} hPa</div>
           <div className="text-sm text-white/70">
             Atmospheric pressure
+=======
+        {/* UV Index */}
+        <div className="bg-white/10 rounded-xl p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-6 h-6 bg-yellow-400 rounded-full"></div>
+            <h3 className="text-lg font-semibold text-white">UV Index</h3>
+          </div>
+          <div className="text-2xl font-bold text-white mb-2">{weather.uvIndex || 'N/A'}</div>
+          <div className="text-sm text-white/70">
+            {weather.uvIndex ? 'Moderate exposure risk' : 'Data unavailable'}
+>>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
           </div>
         </div>
 
@@ -59,7 +80,11 @@ const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
           </div>
           <div className="text-2xl font-bold text-green-400 mb-2">Good</div>
           <div className="text-sm text-white/70">
+<<<<<<< HEAD
             Based on visibility: {kmToMiles(weather.visibility).toFixed(1)} miles
+=======
+            Based on visibility: {weather.visibility} km
+>>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
           </div>
         </div>
       </div>
@@ -71,7 +96,10 @@ const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
           Currently experiencing {weather.description.toLowerCase()} with a temperature of {weather.temperature}°C. 
           Winds are coming from the {weather.windDirection.toLowerCase()} at {weather.windSpeed} mph. 
           Humidity levels are at {weather.humidity}%, creating {comfort.level.toLowerCase()} comfort conditions.
+<<<<<<< HEAD
           Visibility is {kmToMiles(weather.visibility).toFixed(1)} miles.
+=======
+>>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
           {weather.sunset && ` Sunset is expected at ${weather.sunset}.`}
         </p>
       </div>

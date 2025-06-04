@@ -1,11 +1,18 @@
+<<<<<<< HEAD
 import React from 'react';
 import { Droplets, Wind, Eye, Gauge, Sun, Thermometer, Sunrise as SunriseIcon, Sunset as SunsetIcon } from 'lucide-react';
+=======
+
+import React from 'react';
+import { Droplets, Wind, Eye, Gauge, Sun, Thermometer } from 'lucide-react';
+>>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
 import { WeatherData } from '../../../types/weather';
 
 interface WeatherStatsProps {
   weather: WeatherData;
 }
 
+<<<<<<< HEAD
 const kmToMiles = (km: number) => km * 0.621371;
 
 const formatTime = (timestamp: number) => {
@@ -18,6 +25,8 @@ const formatTime = (timestamp: number) => {
   return `${formattedHours}:${formattedMinutes} ${ampm}`;
 };
 
+=======
+>>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
 const WeatherStats: React.FC<WeatherStatsProps> = ({ weather }) => {
   const stats = [
     {
@@ -30,21 +39,42 @@ const WeatherStats: React.FC<WeatherStatsProps> = ({ weather }) => {
     {
       icon: Wind,
       label: 'Wind Speed',
+<<<<<<< HEAD
       value: `${kmToMiles(weather.windSpeed).toFixed(1)} mph`,
+=======
+      value: `${weather.windSpeed} mph`,
+>>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
       description: weather.windDirection,
       color: 'from-green-400 to-green-600'
     },
     {
       icon: Eye,
       label: 'Visibility',
+<<<<<<< HEAD
       value: `${kmToMiles(weather.visibility).toFixed(1)} miles`,
+=======
+      value: `${weather.visibility} km`,
+>>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
       description: 'Clear visibility',
       color: 'from-purple-400 to-purple-600'
     },
     {
+<<<<<<< HEAD
       icon: SunriseIcon,
       label: 'Sunrise',
       value: `${formatTime(weather.sunrise)}`,
+=======
+      icon: Gauge,
+      label: 'Pressure',
+      value: `${weather.pressure} hPa`,
+      description: 'Atmospheric pressure',
+      color: 'from-orange-400 to-orange-600'
+    },
+    {
+      icon: Sun,
+      label: 'Sunset',
+      value: weather.sunset,
+>>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
       description: 'Today',
       color: 'from-yellow-400 to-yellow-600'
     },
@@ -54,6 +84,7 @@ const WeatherStats: React.FC<WeatherStatsProps> = ({ weather }) => {
       value: `${weather.feelsLike}°`,
       description: 'Apparent temperature',
       color: 'from-red-400 to-red-600'
+<<<<<<< HEAD
     },
     {
       icon: SunsetIcon,
@@ -61,6 +92,8 @@ const WeatherStats: React.FC<WeatherStatsProps> = ({ weather }) => {
       value: weather.sunset,
       description: 'Today',
       color: 'from-orange-400 to-orange-600'
+=======
+>>>>>>> 4fb8ed4974cd42cca6295109ac78a41fb94dd05f
     }
   ];
 
