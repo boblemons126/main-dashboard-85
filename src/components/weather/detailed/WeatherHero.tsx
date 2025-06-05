@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { getWeatherIcon } from '../../../utils/weatherUtils';
 import { WeatherData } from '../../../types/weather';
@@ -5,7 +6,7 @@ import WeatherHeader from '../WeatherHeader';
 
 interface WeatherHeroProps {
   weather: WeatherData;
-  onLocationChange: (locationId: string | null) => void;
+  onLocationChange?: (locationId: string | null) => void;
 }
 
 const WeatherHero: React.FC<WeatherHeroProps> = ({ weather, onLocationChange }) => {

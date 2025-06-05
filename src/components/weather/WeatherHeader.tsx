@@ -1,36 +1,51 @@
+
 import React from 'react';
-import { RefreshCw } from 'lucide-react';
+import { MapPin, RefreshCw } from 'lucide-react';
 import LocationDropdown from './LocationDropdown';
 
 interface WeatherHeaderProps {
   location: string;
-  county: string;
+  county?: string;
   onRefresh: () => void;
-  onLocationChange: (locationId: string | null) => void;
+  onLocationChange?: (locationId: string | null) => void;
+  hideRefreshButton?: boolean;
 }
 
 const WeatherHeader: React.FC<WeatherHeaderProps> = ({ 
   location, 
   county, 
   onRefresh, 
-  onLocationChange 
+  onLocationChange,
+  hideRefreshButton = false
 }) => {
   return (
-    <div className="flex items-start justify-between mb-6">
-      <div className="flex-1">
-        <LocationDropdown 
-          currentLocation={location}
-          currentCounty={county}
-          onLocationChange={onLocationChange}
-        />
+    <div className="flex items-start justify-between w-full">
+      <div className="flex items-start space-x-1">
+        {onLocationChange ? (
+          <LocationDropdown 
+            currentLocation={location}
+            currentCounty={county}
+            onLocationChange={onLocationChange}
+          />
+        ) : (
+          <>
+            <MapPin className="w-4 h-4 mt-0.5" />
+            <div>
+              <div className="font-semibold text-base leading-tight">{location}</div>
+              {county && <div className="text-sm opacity-70">{county}</div>}
+            </div>
+          </>
+        )}
       </div>
-      <button 
-        onClick={onRefresh} 
-        className="p-2 hover:bg-white/20 rounded-lg transition-colors ml-4" 
-        title="Refresh weather data"
-      >
-        <RefreshCw className="w-5 h-5" />
-      </button>
+      {!hideRefreshButton && (
+        <button 
+          onClick={onRefresh} 
+          className="p-2 hover:bg-white/20 rounded-lg transition-colors" 
+          title="Refresh weather data"
+        >
+          <RefreshCw className="w-5 h-5" />
+        </button>
+      )}
     </div>
   );
 };

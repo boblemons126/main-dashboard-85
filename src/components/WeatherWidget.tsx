@@ -101,8 +101,8 @@ const WeatherWidget = () => {
   };
 
   const getBackgroundStyle = () => {
-    // Check if colour test is enabled and use custom color
-    if (weatherSettings.colourTest && weatherSettings.customBackgroundColor) {
+    // Use custom color if one is set, regardless of colourTest setting
+    if (weatherSettings.customBackgroundColor) {
       const color = weatherSettings.customBackgroundColor;
       return {
         background: `linear-gradient(135deg, ${color}, ${color}dd, ${color}bb)`
@@ -112,8 +112,8 @@ const WeatherWidget = () => {
   };
 
   const getBackgroundClass = () => {
-    // Use custom color if colour test is enabled, otherwise use dynamic colors
-    if (weatherSettings.colourTest && weatherSettings.customBackgroundColor) {
+    // Use custom color if one is set, otherwise use dynamic colors
+    if (weatherSettings.customBackgroundColor) {
       return '';
     } else {
       return `bg-gradient-to-br ${getGradientByCondition(weather?.condition || 'clear')}`;
@@ -127,7 +127,6 @@ const WeatherWidget = () => {
           ...w,
           config: { 
             ...w.config, 
-            colourTest: true,
             customBackgroundColor: color 
           }
         };
@@ -145,7 +144,7 @@ const WeatherWidget = () => {
           ...w,
           config: { 
             ...w.config, 
-            colourTest: false 
+            customBackgroundColor: undefined 
           }
         };
       }

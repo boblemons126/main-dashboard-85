@@ -204,7 +204,6 @@ const OpenWeatherWidget = () => {
           location={weather.location}
           county={weather.county}
           onRefresh={handleRefresh}
-          onLocationChange={handleLocationChange}
         />
 
         {/* Current weather */}

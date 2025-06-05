@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export interface WidgetSettings {
@@ -61,7 +60,12 @@ interface SettingsContextType {
 
 const defaultSettings: Settings = {
   widgets: [
-    { id: 'weather', enabled: true, position: 0 },
+    { 
+      id: 'weather', 
+      enabled: true, 
+      position: 0,
+      config: { useDynamicColoring: true }
+    },
     { id: 'calendar', enabled: true, position: 1 },
     { id: 'news', enabled: true, position: 2 },
     { id: 'time', enabled: true, position: 3 },
@@ -106,7 +110,18 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const savedSettings = localStorage.getItem('dashboard-settings');
     if (savedSettings) {
       try {
-        setSettings(JSON.parse(savedSettings));
+        const parsed = JSON.parse(savedSettings);
+        // Ensure the weather widget has the useDynamicColoring setting
+        const updatedWidgets = parsed.widgets.map((widget: WidgetSettings) => {
+          if (widget.id === 'weather' && !widget.config?.hasOwnProperty('useDynamicColoring')) {
+            return {
+              ...widget,
+              config: { ...widget.config, useDynamicColoring: true }
+            };
+          }
+          return widget;
+        });
+        setSettings({ ...parsed, widgets: updatedWidgets });
       } catch (error) {
         console.error('Failed to load settings:', error);
       }

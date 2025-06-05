@@ -1,23 +1,95 @@
 
 import React, { useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Palette } from 'lucide-react';
 import { useWeatherData } from '../../hooks/useWeatherData';
 import { useLocationContext } from '../../contexts/LocationContext';
+import { useSettings } from '@/contexts/SettingsContext';
 import WeatherHeader from './WeatherHeader';
 import CurrentWeather from './CurrentWeather';
 import WeatherDetails from './WeatherDetails';
 import ForecastToggle from './ForecastToggle';
 import WeatherForecast from './WeatherForecast';
 import { getGradientByCondition } from '../../utils/weatherUtils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import CustomColorPicker from './CustomColorPicker';
+
+const colorPresets = [
+  { name: 'Blue', value: '#1e3a8a' },
+  { name: 'Purple', value: '#5b21b6' },
+  { name: 'Pink', value: '#db2777' },
+  { name: 'Green', value: '#065f46' },
+  { name: 'Orange', value: '#9a3412' },
+  { name: 'Red', value: '#991b1b' },
+  { name: 'Gray', value: '#1f2937' },
+  { name: 'Teal', value: '#0f766e' },
+];
 
 const WeatherWidget = () => {
   const { weather, loading, error, lastUpdated, refetch, handleLocationChange } = useWeatherData();
   const { setSelectedLocationId } = useLocationContext();
+  const { settings, updateWidgetSettings } = useSettings();
+  const weatherSettings = settings.widgets.find(w => w.id === 'weather')?.config || {};
   const [showHourly, setShowHourly] = useState(true);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
 
   const onLocationChange = (locationId: string | null) => {
     setSelectedLocationId(locationId);
     handleLocationChange(locationId);
+  };
+
+  const updateBackgroundColor = (color: string) => {
+    const updatedWidgets = settings.widgets.map(w => {
+      if (w.id === 'weather') {
+        return {
+          ...w,
+          config: { 
+            ...w.config, 
+            customBackgroundColor: color 
+          }
+        };
+      }
+      return w;
+    });
+    updateWidgetSettings(updatedWidgets);
+    setColorPickerOpen(false);
+  };
+
+  const resetToWeatherBased = () => {
+    const updatedWidgets = settings.widgets.map(w => {
+      if (w.id === 'weather') {
+        return {
+          ...w,
+          config: { 
+            ...w.config, 
+            customBackgroundColor: undefined 
+          }
+        };
+      }
+      return w;
+    });
+    updateWidgetSettings(updatedWidgets);
+    setColorPickerOpen(false);
+  };
+
+  const getBackgroundStyle = () => {
+    // Only use custom color if dynamic coloring is disabled and a custom color is set
+    if (!weatherSettings.useDynamicColoring && weatherSettings.customBackgroundColor) {
+      const color = weatherSettings.customBackgroundColor;
+      return {
+        background: `linear-gradient(135deg, ${color}, ${color}dd, ${color}bb)`
+      };
+    }
+    return {};
+  };
+
+  const getBackgroundClass = () => {
+    // Only use custom color if dynamic coloring is disabled, otherwise use dynamic colors
+    if (!weatherSettings.useDynamicColoring && weatherSettings.customBackgroundColor) {
+      return '';
+    } else {
+      return `bg-gradient-to-br ${getGradientByCondition(weather?.condition || 'clear')}`;
+    }
   };
 
   if (loading) {
@@ -61,19 +133,51 @@ const WeatherWidget = () => {
   if (!weather) return null;
 
   return (
-    <div className={`bg-gradient-to-br ${getGradientByCondition(weather.condition)} rounded-2xl p-6 text-white shadow-xl relative overflow-hidden`}>
+    <div 
+      className={`${getBackgroundClass()} rounded-2xl p-6 text-white shadow-xl relative overflow-hidden`}
+      style={getBackgroundStyle()}
+    >
       {/* Background decoration */}
       <div className="absolute inset-0 bg-black/10"></div>
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 rounded-full"></div>
       <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-white/5 rounded-full"></div>
       
       <div className="relative z-10">
-        <WeatherHeader 
-          location={weather.location}
-          county={weather.county}
-          onRefresh={refetch}
-          onLocationChange={onLocationChange}
-        />
+        {/* Header */}
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex items-start space-x-1 mt-1">
+            <WeatherHeader 
+              location={weather.location}
+              county={weather.county}
+              onRefresh={refetch}
+              onLocationChange={onLocationChange}
+              hideRefreshButton={true}
+            />
+          </div>
+          <div className="flex items-center space-x-2">
+            {/* Only show color picker if dynamic coloring is disabled */}
+            {!weatherSettings.useDynamicColoring && (
+              <Popover open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
+                <PopoverTrigger asChild>
+                  <button className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Change background color">
+                    <Palette className="w-5 h-5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 border-0 bg-transparent shadow-none">
+                  <CustomColorPicker
+                    value={weatherSettings.customBackgroundColor || '#1e3a8a'}
+                    onChange={updateBackgroundColor}
+                    onClose={() => setColorPickerOpen(false)}
+                    onReset={resetToWeatherBased}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+            <button onClick={refetch} className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Refresh weather data">
+              <RefreshCw className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
         
         <CurrentWeather 
           temperature={weather.temperature}
