@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { RefreshCw, Palette } from 'lucide-react';
 import { useWeatherData } from '../../hooks/useWeatherData';
@@ -28,48 +27,13 @@ const colorPresets = [
 const WeatherWidget = () => {
   const { weather, loading, error, lastUpdated, refetch, handleLocationChange } = useWeatherData();
   const { setSelectedLocationId } = useLocationContext();
-  const { settings, updateWidgetSettings } = useSettings();
+  const { settings } = useSettings();
   const weatherSettings = settings.widgets.find(w => w.id === 'weather')?.config || {};
   const [showHourly, setShowHourly] = useState(true);
-  const [colorPickerOpen, setColorPickerOpen] = useState(false);
 
   const onLocationChange = (locationId: string | null) => {
     setSelectedLocationId(locationId);
     handleLocationChange(locationId);
-  };
-
-  const updateBackgroundColor = (color: string) => {
-    const updatedWidgets = settings.widgets.map(w => {
-      if (w.id === 'weather') {
-        return {
-          ...w,
-          config: { 
-            ...w.config, 
-            customBackgroundColor: color 
-          }
-        };
-      }
-      return w;
-    });
-    updateWidgetSettings(updatedWidgets);
-    setColorPickerOpen(false);
-  };
-
-  const resetToWeatherBased = () => {
-    const updatedWidgets = settings.widgets.map(w => {
-      if (w.id === 'weather') {
-        return {
-          ...w,
-          config: { 
-            ...w.config, 
-            customBackgroundColor: undefined 
-          }
-        };
-      }
-      return w;
-    });
-    updateWidgetSettings(updatedWidgets);
-    setColorPickerOpen(false);
   };
 
   const getBackgroundStyle = () => {
@@ -155,24 +119,6 @@ const WeatherWidget = () => {
             />
           </div>
           <div className="flex items-center space-x-2">
-            {/* Only show color picker if dynamic coloring is disabled */}
-            {!weatherSettings.useDynamicColoring && (
-              <Popover open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
-                <PopoverTrigger asChild>
-                  <button className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Change background color">
-                    <Palette className="w-5 h-5" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="p-0 border-0 bg-transparent shadow-none">
-                  <CustomColorPicker
-                    value={weatherSettings.customBackgroundColor || '#1e3a8a'}
-                    onChange={updateBackgroundColor}
-                    onClose={() => setColorPickerOpen(false)}
-                    onReset={resetToWeatherBased}
-                  />
-                </PopoverContent>
-              </Popover>
-            )}
             <button onClick={refetch} className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Refresh weather data">
               <RefreshCw className="w-5 h-5" />
             </button>
