@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Thermometer, Droplets, Wind, Eye, Gauge, Sun, Cloud, CloudRain, CloudSnow, Zap, RefreshCw, Clock, Calendar } from 'lucide-react';
+import { MapPin, Thermometer, Droplets, Wind, Eye, Gauge, Sun, Cloud, CloudRain, CloudSnow, Zap, RefreshCw, Clock, Calendar, Palette } from 'lucide-react';
 import { getWeatherData } from '../services/weather';
 import { useSettings } from '@/contexts/SettingsContext';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
 
 interface WeatherData {
   temperature: number;
@@ -40,15 +42,27 @@ interface WeatherData {
   windDirection: string;
 }
 
+const colorPresets = [
+  { name: 'Blue', value: '#1e3a8a' },
+  { name: 'Purple', value: '#5b21b6' },
+  { name: 'Pink', value: '#db2777' },
+  { name: 'Green', value: '#065f46' },
+  { name: 'Orange', value: '#9a3412' },
+  { name: 'Red', value: '#991b1b' },
+  { name: 'Gray', value: '#1f2937' },
+  { name: 'Teal', value: '#0f766e' },
+];
+
 const WeatherWidget = () => {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [showHourly, setShowHourly] = useState(true);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const forecastScrollRef = useRef<HTMLDivElement>(null);
   const scrollInterval = useRef<NodeJS.Timeout | null>(null);
-  const { settings } = useSettings();
+  const { settings, updateWidgetSettings } = useSettings();
   const weatherSettings = settings.widgets.find(w => w.id === 'weather')?.config || {};
 
   const getWeatherIcon = (condition: string, size: string = "w-8 h-8") => {
@@ -104,6 +118,41 @@ const WeatherWidget = () => {
     } else {
       return `bg-gradient-to-br ${getGradientByCondition(weather?.condition || 'clear')}`;
     }
+  };
+
+  const updateBackgroundColor = (color: string) => {
+    const updatedWidgets = settings.widgets.map(w => {
+      if (w.id === 'weather') {
+        return {
+          ...w,
+          config: { 
+            ...w.config, 
+            colourTest: true,
+            customBackgroundColor: color 
+          }
+        };
+      }
+      return w;
+    });
+    updateWidgetSettings(updatedWidgets);
+    setColorPickerOpen(false);
+  };
+
+  const resetToWeatherBased = () => {
+    const updatedWidgets = settings.widgets.map(w => {
+      if (w.id === 'weather') {
+        return {
+          ...w,
+          config: { 
+            ...w.config, 
+            colourTest: false 
+          }
+        };
+      }
+      return w;
+    });
+    updateWidgetSettings(updatedWidgets);
+    setColorPickerOpen(false);
   };
 
   const fetchWeatherData = async () => {
@@ -224,9 +273,51 @@ const WeatherWidget = () => {
               {weather.county && <div className="text-sm opacity-70">{weather.county}</div>}
             </div>
           </div>
-          <button onClick={handleRefresh} className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Refresh weather data">
-            <RefreshCw className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <Popover open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
+              <PopoverTrigger asChild>
+                <button className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Change background color">
+                  <Palette className="w-5 h-5" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-4 bg-slate-900/95 backdrop-blur-xl border-white/10 shadow-2xl shadow-black/40">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-white font-medium mb-3">Background Color</h4>
+                    <div className="grid grid-cols-4 gap-2 mb-4">
+                      {colorPresets.map((color) => (
+                        <Button
+                          key={color.value}
+                          variant="outline"
+                          className="relative group p-0 h-10 border-2 rounded-lg overflow-hidden transition-all duration-200"
+                          style={{
+                            backgroundColor: color.value,
+                            borderColor: weatherSettings.customBackgroundColor === color.value 
+                              ? 'white' 
+                              : 'rgba(255, 255, 255, 0.1)'
+                          }}
+                          onClick={() => updateBackgroundColor(color.value)}
+                          title={color.name}
+                        >
+                          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
+                        </Button>
+                      ))}
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      onClick={resetToWeatherBased}
+                    >
+                      Use Weather-Based Colors
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+            <button onClick={handleRefresh} className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Refresh weather data">
+              <RefreshCw className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Current weather */}
