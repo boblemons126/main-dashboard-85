@@ -91,21 +91,8 @@ const WeatherWidget = () => {
       // Use dynamic colors based on weather condition
       return getGradientByCondition(weather?.condition || 'clear');
     } else {
-      // Use static color chosen by user
-      const staticColor = weatherSettings.staticBackgroundColor || '#1e3a8a';
-      // Create a gradient effect by darkening the base color
-      const baseColor = staticColor.replace('#', '');
-      const r = parseInt(baseColor.slice(0, 2), 16);
-      const g = parseInt(baseColor.slice(2, 4), 16);
-      const b = parseInt(baseColor.slice(4, 6), 16);
-      
-      // Create darker shades for the gradient
-      const darken = (amount: number) => {
-        const factor = 1 - amount;
-        return `#${Math.floor(r * factor).toString(16).padStart(2, '0')}${Math.floor(g * factor).toString(16).padStart(2, '0')}${Math.floor(b * factor).toString(16).padStart(2, '0')}`;
-      };
-      
-      return `from-[${staticColor}] via-[${darken(0.2)}] to-[${darken(0.4)}]`;
+      // Use static green background
+      return 'from-green-500 via-green-600 to-green-700';
     }
   };
 
