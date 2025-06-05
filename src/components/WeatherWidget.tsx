@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Thermometer, Droplets, Wind, Eye, Gauge, Sun, Cloud, CloudRain, CloudSnow, Zap, RefreshCw, Clock, Calendar } from 'lucide-react';
 import { getWeatherData } from '../services/weather';
+import { useSettings } from '@/contexts/SettingsContext';
 
 interface WeatherData {
   temperature: number;
@@ -47,6 +48,8 @@ const WeatherWidget = () => {
   const [showHourly, setShowHourly] = useState(true);
   const forecastScrollRef = useRef<HTMLDivElement>(null);
   const scrollInterval = useRef<NodeJS.Timeout | null>(null);
+  const { settings } = useSettings();
+  const weatherSettings = settings.widgets.find(w => w.id === 'weather')?.config || {};
 
   const getWeatherIcon = (condition: string, size: string = "w-8 h-8") => {
     const iconClass = `${size} text-white drop-shadow-md`;
@@ -81,6 +84,38 @@ const WeatherWidget = () => {
     } else {
       return 'from-blue-400 via-blue-500 to-blue-600';
     }
+  };
+
+  const getBackgroundGradient = () => {
+    if (weatherSettings.dynamicColorGrading !== false) {
+      // Use dynamic colors based on weather condition
+      return getGradientByCondition(weather?.condition || 'clear');
+    } else {
+      // Use static color chosen by user
+      const staticColor = weatherSettings.staticBackgroundColor || '#1e3a8a';
+      // Create a gradient effect by darkening the base color
+      const baseColor = staticColor.replace('#', '');
+      const r = parseInt(baseColor.slice(0, 2), 16);
+      const g = parseInt(baseColor.slice(2, 4), 16);
+      const b = parseInt(baseColor.slice(4, 6), 16);
+      
+      // Create darker shades for the gradient
+      const darken = (amount: number) => {
+        const factor = 1 - amount;
+        return `#${Math.floor(r * factor).toString(16).padStart(2, '0')}${Math.floor(g * factor).toString(16).padStart(2, '0')}${Math.floor(b * factor).toString(16).padStart(2, '0')}`;
+      };
+      
+      return `from-[${staticColor}] via-[${darken(0.2)}] to-[${darken(0.4)}]`;
+    }
+  };
+
+  // Helper function to darken/lighten a hex color
+  const adjustColor = (color: string, amount: number) => {
+    const hex = color.replace('#', '');
+    const r = Math.max(0, Math.min(255, parseInt(hex.slice(0, 2), 16) + amount));
+    const g = Math.max(0, Math.min(255, parseInt(hex.slice(2, 4), 16) + amount));
+    const b = Math.max(0, Math.min(255, parseInt(hex.slice(4, 6), 16) + amount));
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
   };
 
   const fetchWeatherData = async () => {
@@ -182,7 +217,7 @@ const WeatherWidget = () => {
 
   if (!weather) return null;
 
-  return <div className={`bg-gradient-to-br ${getGradientByCondition(weather.condition)} rounded-2xl p-6 text-white shadow-xl relative overflow-hidden`}>
+  return <div className={`bg-gradient-to-br ${getBackgroundGradient()} rounded-2xl p-6 text-white shadow-xl relative overflow-hidden`}>
       {/* Background decoration */}
       <div className="absolute inset-0 bg-black/10"></div>
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 rounded-full"></div>
