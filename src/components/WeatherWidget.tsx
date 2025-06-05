@@ -87,12 +87,12 @@ const WeatherWidget = () => {
   };
 
   const getBackgroundGradient = () => {
-    if (weatherSettings.dynamicColorGrading !== false) {
-      // Use dynamic colors based on weather condition
-      return getGradientByCondition(weather?.condition || 'clear');
-    } else {
-      // Use static green background
+    // Check if dynamic color grading is disabled (false) - if so, use green
+    if (weatherSettings.dynamicColorGrading === false) {
       return 'from-green-500 via-green-600 to-green-700';
+    } else {
+      // Use dynamic colors based on weather condition (default behavior)
+      return getGradientByCondition(weather?.condition || 'clear');
     }
   };
 
