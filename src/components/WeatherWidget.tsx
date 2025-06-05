@@ -87,13 +87,26 @@ const WeatherWidget = () => {
   };
 
   const getBackgroundGradient = () => {
-    // Check if dynamic color grading is disabled (false) - if so, use green
-    if (weatherSettings.dynamicColorGrading === false) {
-      return 'from-green-500 via-green-600 to-green-700';
+    // Check if colour test is enabled and use custom color
+    if (weatherSettings.colourTest === true && weatherSettings.customBackgroundColor) {
+      // Convert hex to gradient classes or use inline styles
+      const customColor = weatherSettings.customBackgroundColor;
+      return `bg-[${customColor}]`;
     } else {
       // Use dynamic colors based on weather condition (default behavior)
       return getGradientByCondition(weather?.condition || 'clear');
     }
+  };
+
+  // Helper function to get custom background style for inline use
+  const getCustomBackgroundStyle = () => {
+    if (weatherSettings.colourTest === true && weatherSettings.customBackgroundColor) {
+      const color = weatherSettings.customBackgroundColor;
+      return {
+        background: `linear-gradient(135deg, ${color}, ${color}dd, ${color}bb)`
+      };
+    }
+    return {};
   };
 
   // Helper function to darken/lighten a hex color
@@ -204,7 +217,10 @@ const WeatherWidget = () => {
 
   if (!weather) return null;
 
-  return <div className={`bg-gradient-to-br ${getBackgroundGradient()} rounded-2xl p-6 text-white shadow-xl relative overflow-hidden`}>
+  return <div 
+      className={`${weatherSettings.colourTest === true && weatherSettings.customBackgroundColor ? '' : `bg-gradient-to-br ${getBackgroundGradient()}`} rounded-2xl p-6 text-white shadow-xl relative overflow-hidden`}
+      style={getCustomBackgroundStyle()}
+    >
       {/* Background decoration */}
       <div className="absolute inset-0 bg-black/10"></div>
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 rounded-full"></div>

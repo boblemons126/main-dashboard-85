@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -75,12 +76,12 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
   };
 
   // Get the current active color for glow effects
-  const activeColor = hoveredColor || config.staticBackgroundColor || '#1e3a8a';
+  const activeColor = hoveredColor || config.customBackgroundColor || '#1e3a8a';
 
   // Update color from HSL values
   const updateFromHSL = () => {
     const hexColor = hslToHex(hue, saturation, lightness);
-    updateConfig({ staticBackgroundColor: hexColor });
+    updateConfig({ customBackgroundColor: hexColor });
   };
 
   return (
@@ -88,51 +89,32 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
       <Card className="bg-white/5 backdrop-blur-md border-white/10">
         <CardHeader>
           <CardTitle className="text-white flex items-center">
-            <Thermometer className="w-5 h-5 mr-2" />
-            Display Settings
+            <Palette className="w-5 h-5 mr-2" />
+            Color Settings
           </CardTitle>
           <CardDescription className="text-blue-200">
-            Configure how weather information is displayed
+            Customize the appearance of your weather widget for better accessibility
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-white">Temperature Unit</Label>
-              <p className="text-sm text-gray-300">Choose your preferred temperature scale</p>
-            </div>
-            <Select
-              value={config.temperatureUnit ?? 'celsius'}
-              onValueChange={(value) => updateConfig({ temperatureUnit: value })}
-            >
-              <SelectTrigger className="w-[180px] bg-white/10 border-white/20 text-white">
-                <SelectValue placeholder="Select unit" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="celsius">Celsius (°C)</SelectItem>
-                <SelectItem value="fahrenheit">Fahrenheit (°F)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <Label className="text-white">Dynamic Color Grading</Label>
-                <p className="text-sm text-gray-300">Change background color based on weather conditions</p>
+                <Label className="text-white">Colour Test</Label>
+                <p className="text-sm text-gray-300">Override dynamic background with a custom color for better accessibility</p>
               </div>
               <Switch
-                checked={config.dynamicColorGrading ?? true}
-                onCheckedChange={(checked) => updateConfig({ dynamicColorGrading: checked })}
+                checked={config.colourTest ?? false}
+                onCheckedChange={(checked) => updateConfig({ colourTest: checked })}
               />
             </div>
 
-            {!config.dynamicColorGrading && (
+            {config.colourTest && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-white">Static Background Color</Label>
-                    <p className="text-sm text-gray-300">Choose a custom background color</p>
+                    <Label className="text-white">Custom Background Color</Label>
+                    <p className="text-sm text-gray-300">Choose a custom background color that works best for you</p>
                   </div>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -140,7 +122,7 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                         variant="outline"
                         className="w-[140px] h-8 border-2 relative group"
                         style={{
-                          backgroundColor: config.staticBackgroundColor ?? '#1e3a8a',
+                          backgroundColor: config.customBackgroundColor ?? '#1e3a8a',
                           borderColor: 'rgba(255, 255, 255, 0.2)'
                         }}
                       >
@@ -148,7 +130,7 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                         <div className="relative flex items-center justify-center">
                           <div 
                             className="w-4 h-4 rounded-full mr-2 border-2 border-white/20"
-                            style={{ backgroundColor: config.staticBackgroundColor ?? '#1e3a8a' }}
+                            style={{ backgroundColor: config.customBackgroundColor ?? '#1e3a8a' }}
                           />
                           <span className="text-white/90 text-sm">Select Color</span>
                         </div>
@@ -256,14 +238,14 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                                     className="relative group p-0 h-12 border-2 rounded-lg overflow-hidden transition-all duration-200"
                                     style={{
                                       backgroundColor: color.value,
-                                      borderColor: config.staticBackgroundColor === color.value 
+                                      borderColor: config.customBackgroundColor === color.value 
                                         ? 'white' 
                                         : 'rgba(255, 255, 255, 0.1)',
                                       boxShadow: hoveredColor === color.value 
                                         ? `0 0 20px ${color.value}33` 
                                         : 'none'
                                     }}
-                                    onClick={() => updateConfig({ staticBackgroundColor: color.value })}
+                                    onClick={() => updateConfig({ customBackgroundColor: color.value })}
                                     onPointerEnter={() => setHoveredColor(color.value)}
                                     onPointerLeave={() => setHoveredColor(null)}
                                   >
@@ -304,6 +286,38 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                 </div>
               </div>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-white/5 backdrop-blur-md border-white/10">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center">
+            <Thermometer className="w-5 h-5 mr-2" />
+            Display Settings
+          </CardTitle>
+          <CardDescription className="text-blue-200">
+            Configure how weather information is displayed
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-white">Temperature Unit</Label>
+              <p className="text-sm text-gray-300">Choose your preferred temperature scale</p>
+            </div>
+            <Select
+              value={config.temperatureUnit ?? 'celsius'}
+              onValueChange={(value) => updateConfig({ temperatureUnit: value })}
+            >
+              <SelectTrigger className="w-[180px] bg-white/10 border-white/20 text-white">
+                <SelectValue placeholder="Select unit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="celsius">Celsius (°C)</SelectItem>
+                <SelectItem value="fahrenheit">Fahrenheit (°F)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex items-center justify-between">
