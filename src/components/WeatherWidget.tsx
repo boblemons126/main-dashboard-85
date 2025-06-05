@@ -86,21 +86,9 @@ const WeatherWidget = () => {
     }
   };
 
-  const getBackgroundGradient = () => {
+  const getBackgroundStyle = () => {
     // Check if colour test is enabled and use custom color
-    if (weatherSettings.colourTest === true && weatherSettings.customBackgroundColor) {
-      // Convert hex to gradient classes or use inline styles
-      const customColor = weatherSettings.customBackgroundColor;
-      return `bg-[${customColor}]`;
-    } else {
-      // Use dynamic colors based on weather condition (default behavior)
-      return getGradientByCondition(weather?.condition || 'clear');
-    }
-  };
-
-  // Helper function to get custom background style for inline use
-  const getCustomBackgroundStyle = () => {
-    if (weatherSettings.colourTest === true && weatherSettings.customBackgroundColor) {
+    if (weatherSettings.colourTest && weatherSettings.customBackgroundColor) {
       const color = weatherSettings.customBackgroundColor;
       return {
         background: `linear-gradient(135deg, ${color}, ${color}dd, ${color}bb)`
@@ -109,13 +97,13 @@ const WeatherWidget = () => {
     return {};
   };
 
-  // Helper function to darken/lighten a hex color
-  const adjustColor = (color: string, amount: number) => {
-    const hex = color.replace('#', '');
-    const r = Math.max(0, Math.min(255, parseInt(hex.slice(0, 2), 16) + amount));
-    const g = Math.max(0, Math.min(255, parseInt(hex.slice(2, 4), 16) + amount));
-    const b = Math.max(0, Math.min(255, parseInt(hex.slice(4, 6), 16) + amount));
-    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  const getBackgroundClass = () => {
+    // Use custom color if colour test is enabled, otherwise use dynamic colors
+    if (weatherSettings.colourTest && weatherSettings.customBackgroundColor) {
+      return '';
+    } else {
+      return `bg-gradient-to-br ${getGradientByCondition(weather?.condition || 'clear')}`;
+    }
   };
 
   const fetchWeatherData = async () => {
@@ -174,7 +162,7 @@ const WeatherWidget = () => {
           behavior: 'smooth'
         });
       }
-    }, 16); // ~60fps
+    }, 16);
   };
 
   const stopScroll = () => {
@@ -218,8 +206,8 @@ const WeatherWidget = () => {
   if (!weather) return null;
 
   return <div 
-      className={`${weatherSettings.colourTest === true && weatherSettings.customBackgroundColor ? '' : `bg-gradient-to-br ${getBackgroundGradient()}`} rounded-2xl p-6 text-white shadow-xl relative overflow-hidden`}
-      style={getCustomBackgroundStyle()}
+      className={`${getBackgroundClass()} rounded-2xl p-6 text-white shadow-xl relative overflow-hidden`}
+      style={getBackgroundStyle()}
     >
       {/* Background decoration */}
       <div className="absolute inset-0 bg-black/10"></div>
