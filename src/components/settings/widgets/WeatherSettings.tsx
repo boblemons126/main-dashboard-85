@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -11,8 +10,6 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
-import { useWeatherData } from '@/hooks/useWeatherData';
-import { getWeatherIcon } from '@/utils/weatherUtils';
 
 // Expanded color presets with more shades
 const colorPresets = [
@@ -46,7 +43,6 @@ interface WeatherSettingsProps {
 
 const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) => {
   const { settings, updateWidgetSettings } = useSettings();
-  const { weather } = useWeatherData();
   const widget = settings.widgets.find(w => w.id === 'weather');
   const config = widget?.config || {};
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -88,111 +84,70 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
     updateConfig({ customBackgroundColor: hex });
   };
 
-  // Weather widget preview component with live data
-  const WeatherWidgetPreview = ({ color }: { color: string }) => {
-    if (!weather) {
-      return (
-        <div 
-          className="relative rounded-xl p-4 text-white shadow-lg overflow-hidden"
-          style={{
-            background: `linear-gradient(135deg, ${color}, ${color}dd, ${color}bb)`,
-            boxShadow: `0 0 30px ${color}66, 0 0 60px ${color}33`
-          }}
-        >
-          <div className="animate-pulse">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-4 bg-white/20 rounded w-16"></div>
-              <div className="h-6 bg-white/20 rounded w-12"></div>
-            </div>
-            <div className="h-8 bg-white/20 rounded w-20 mb-3"></div>
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              <div className="h-12 bg-white/20 rounded"></div>
-              <div className="h-12 bg-white/20 rounded"></div>
-              <div className="h-12 bg-white/20 rounded"></div>
-            </div>
-            <div className="h-12 bg-white/20 rounded"></div>
+  // Weather widget preview component
+  const WeatherWidgetPreview = ({ color }: { color: string }) => (
+    <div 
+      className="relative rounded-xl p-4 text-white shadow-lg overflow-hidden"
+      style={{
+        background: `linear-gradient(135deg, ${color}, ${color}dd, ${color}bb)`,
+        boxShadow: `0 0 30px ${color}66, 0 0 60px ${color}33`
+      }}
+    >
+      {/* Background decoration */}
+      <div className="absolute inset-0 bg-black/10"></div>
+      <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/5 rounded-full"></div>
+      <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-white/5 rounded-full"></div>
+      
+      <div className="relative z-10">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-start space-x-1">
+            <MapPin className="w-3 h-3 mt-0.5" />
           </div>
         </div>
-      );
-    }
 
-    return (
-      <div 
-        className="relative rounded-xl p-4 text-white shadow-lg overflow-hidden"
-        style={{
-          background: `linear-gradient(135deg, ${color}, ${color}dd, ${color}bb)`,
-          boxShadow: `0 0 30px ${color}66, 0 0 60px ${color}33`
-        }}
-      >
-        {/* Background decoration */}
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/5 rounded-full"></div>
-        <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-white/5 rounded-full"></div>
-        
-        <div className="relative z-10">
-          {/* Header */}
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-start space-x-1">
-              <MapPin className="w-3 h-3 mt-0.5" />
-              <div>
-                <div className="font-semibold text-sm leading-tight">{weather.location}</div>
-                {weather.county && <div className="text-xs opacity-70">{weather.county}</div>}
-              </div>
-            </div>
-            <div className="flex items-center space-x-1">
-              <button className="p-1 hover:bg-white/20 rounded transition-colors" title="Change background color">
-                <Palette className="w-3 h-3" />
-              </button>
-              <button className="p-1 hover:bg-white/20 rounded transition-colors" title="Refresh weather data">
-                <RefreshCw className="w-3 h-3" />
-              </button>
-            </div>
+        {/* Current weather */}
+        <div className="flex items-center space-x-3 mb-4">
+          <Sun className="w-10 h-10" />
+          <div>
+            <div className="text-2xl font-bold">22°</div>
+            <div className="text-xs opacity-80">Sunny</div>
+            <div className="text-xs opacity-70">Feels like 24°</div>
           </div>
+        </div>
 
-          {/* Current weather */}
-          <div className="flex items-center space-x-3 mb-4">
-            {getWeatherIcon(weather.condition, "w-10 h-10")}
-            <div>
-              <div className="text-2xl font-bold">{weather.temperature}°</div>
-              <div className="text-xs opacity-80 capitalize">{weather.description}</div>
-              <div className="text-xs opacity-70">Feels like {weather.feelsLike}°</div>
-            </div>
+        {/* Weather details */}
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          <div className="bg-white/15 backdrop-blur-sm rounded-lg p-2 text-center">
+            <Droplets className="w-3 h-3 mx-auto mb-1" />
+            <div className="text-xs opacity-80">Humidity</div>
+            <div className="font-semibold text-sm">65%</div>
           </div>
+          <div className="bg-white/15 backdrop-blur-sm rounded-lg p-2 text-center">
+            <Wind className="w-3 h-3 mx-auto mb-1" />
+            <div className="text-xs opacity-80">Wind</div>
+            <div className="font-semibold text-sm">12 mph</div>
+          </div>
+          <div className="bg-white/15 backdrop-blur-sm rounded-lg p-2 text-center">
+            <Sun className="w-3 h-3 mx-auto mb-1" />
+            <div className="text-xs opacity-80">Sunset</div>
+            <div className="font-semibold text-sm">6:30 PM</div>
+          </div>
+        </div>
 
-          {/* Weather details */}
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <div className="bg-white/15 backdrop-blur-sm rounded-lg p-2 text-center">
-              <Droplets className="w-3 h-3 mx-auto mb-1" />
-              <div className="text-xs opacity-80">Humidity</div>
-              <div className="font-semibold text-sm">{weather.humidity}%</div>
+        {/* Mini forecast */}
+        <div className="flex space-x-2">
+          {[1, 2, 3, 4].map((_, index) => (
+            <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-1.5 text-center min-w-0 flex-1">
+              <div className="text-xs opacity-80">{12 + index}:00</div>
+              <Sun className="w-3 h-3 mx-auto my-1" />
+              <div className="text-xs font-semibold">{22 + index}°</div>
             </div>
-            <div className="bg-white/15 backdrop-blur-sm rounded-lg p-2 text-center">
-              <Wind className="w-3 h-3 mx-auto mb-1" />
-              <div className="text-xs opacity-80">Wind</div>
-              <div className="font-semibold text-sm">{weather.windSpeed} mph</div>
-              <div className="text-xs opacity-70 -mt-0.5">{weather.windDirection}</div>
-            </div>
-            <div className="bg-white/15 backdrop-blur-sm rounded-lg p-2 text-center">
-              <Sun className="w-3 h-3 mx-auto mb-1" />
-              <div className="text-xs opacity-80">Sunset</div>
-              <div className="font-semibold text-sm">{weather.sunset}</div>
-            </div>
-          </div>
-
-          {/* Mini forecast */}
-          <div className="flex space-x-2">
-            {weather.hourlyForecast.slice(0, 4).map((hour, index) => (
-              <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-1.5 text-center min-w-0 flex-1">
-                <div className="text-xs opacity-80">{hour.hour}</div>
-                {getWeatherIcon(hour.condition, "w-3 h-3 mx-auto my-1")}
-                <div className="text-xs font-semibold">{hour.temperature}°</div>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
       </div>
-    );
-  };
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -209,12 +164,12 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-white">Colour Test</Label>
-              <p className="text-sm text-gray-300">Override weather-based colors with a custom background</p>
+              <Label className="text-white">Use Dynamic Colour Grading</Label>
+              <p className="text-sm text-gray-300">Enable automatic weather-based background colors</p>
             </div>
             <Switch
-              checked={!config.useDynamicColoring}
-              onCheckedChange={(checked) => updateConfig({ useDynamicColoring: !checked })}
+              checked={config.useDynamicColoring ?? true}
+              onCheckedChange={(checked) => updateConfig({ useDynamicColoring: checked })}
             />
           </div>
 
@@ -223,7 +178,7 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-white">Custom Background Color</Label>
-                  <p className="text-sm text-gray-300">Choose a custom color for the weather widget background</p>
+                  <p className="text-sm text-gray-300">Override the weather-based background with a custom color</p>
                 </div>
                 <Popover open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
                   <PopoverTrigger asChild>
@@ -249,16 +204,10 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                   <PopoverContent className="w-80 p-4 bg-slate-900/95 backdrop-blur-xl border-white/10 shadow-2xl shadow-black/40">
                     <Tabs defaultValue="picker" value={selectedTab} onValueChange={setSelectedTab}>
                       <TabsList className="grid w-full grid-cols-2 bg-slate-800/50">
-                        <TabsTrigger 
-                          value="picker" 
-                          className="text-white data-[state=active]:bg-slate-700"
-                        >
+                        <TabsTrigger value="picker" className="text-white data-[state=active]:bg-slate-700">
                           Color Picker
                         </TabsTrigger>
-                        <TabsTrigger 
-                          value="presets" 
-                          className="text-white data-[state=active]:bg-slate-700"
-                        >
+                        <TabsTrigger value="presets" className="text-white data-[state=active]:bg-slate-700">
                           Presets
                         </TabsTrigger>
                       </TabsList>
@@ -321,7 +270,7 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label className="text-white block font-medium">Live Weather Widget Preview</Label>
+                              <Label className="text-white block font-medium">Weather Widget Preview</Label>
                               <WeatherWidgetPreview color={hslToHex(hue, saturation, lightness)} />
                             </div>
                           </div>
@@ -371,7 +320,7 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                               ))}
                             </div>
                             <div className="space-y-2">
-                              <Label className="text-white block font-medium">Live Weather Widget Preview</Label>
+                              <Label className="text-white block font-medium">Weather Widget Preview</Label>
                               <WeatherWidgetPreview color={config.customBackgroundColor ?? '#1e3a8a'} />
                             </div>
                           </div>
@@ -386,6 +335,158 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                   </PopoverContent>
                 </Popover>
               </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-white">Temperature Unit</Label>
+              <p className="text-sm text-gray-300">Choose your preferred temperature scale</p>
+            </div>
+            <Select
+              value={config.temperatureUnit ?? 'celsius'}
+              onValueChange={(value) => updateConfig({ temperatureUnit: value })}
+            >
+              <SelectTrigger className="w-[180px] bg-white/10 border-white/20 text-white">
+                <SelectValue placeholder="Select unit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="celsius">Celsius (°C)</SelectItem>
+                <SelectItem value="fahrenheit">Fahrenheit (°F)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-white">Show Wind Speed</Label>
+              <p className="text-sm text-gray-300">Display wind speed information</p>
+            </div>
+            <Switch
+              checked={config.showWind ?? true}
+              onCheckedChange={(checked) => updateConfig({ showWind: checked })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-white">Show Humidity</Label>
+              <p className="text-sm text-gray-300">Display humidity percentage</p>
+            </div>
+            <Switch
+              checked={config.showHumidity ?? true}
+              onCheckedChange={(checked) => updateConfig({ showHumidity: checked })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-white">Extended Forecast Days</Label>
+              <p className="text-sm text-gray-300">Number of days to show in forecast</p>
+            </div>
+            <Select
+              value={String(config.forecastDays ?? 5)}
+              onValueChange={(value) => updateConfig({ forecastDays: Number(value) })}
+            >
+              <SelectTrigger className="w-[180px] bg-white/10 border-white/20 text-white">
+                <SelectValue placeholder="Select days" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3">3 Days</SelectItem>
+                <SelectItem value="5">5 Days</SelectItem>
+                <SelectItem value="7">7 Days</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-white/5 backdrop-blur-md border-white/10">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center">
+            <MapPin className="w-5 h-5 mr-2" />
+            Location Settings
+          </CardTitle>
+          <CardDescription className="text-blue-200">
+            Configure your weather location preferences
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-white">Use Device Location</Label>
+              <p className="text-sm text-gray-300">Automatically detect your location</p>
+            </div>
+            <Switch
+              checked={config.useDeviceLocation ?? true}
+              onCheckedChange={(checked) => updateConfig({ useDeviceLocation: checked })}
+            />
+          </div>
+
+          {!config.useDeviceLocation && (
+            <div className="space-y-2">
+              <Label className="text-white">Manual Location</Label>
+              <div className="flex space-x-2">
+                <Input
+                  placeholder="Enter city name"
+                  value={config.manualLocation ?? ''}
+                  onChange={(e) => updateConfig({ manualLocation: e.target.value })}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                />
+                <Button 
+                  variant="outline"
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                  onClick={() => {/* Implement location search */}}
+                >
+                  Search
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="bg-white/5 backdrop-blur-md border-white/10">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center">
+            <RefreshCw className="w-5 h-5 mr-2" />
+            Update Settings
+          </CardTitle>
+          <CardDescription className="text-blue-200">
+            Configure how often the weather data updates
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-white">Auto Refresh</Label>
+              <p className="text-sm text-gray-300">Automatically update weather data</p>
+            </div>
+            <Switch
+              checked={config.autoRefresh ?? true}
+              onCheckedChange={(checked) => updateConfig({ autoRefresh: checked })}
+            />
+          </div>
+
+          {config.autoRefresh && (
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-white">Refresh Interval</Label>
+                <p className="text-sm text-gray-300">How often to update weather data</p>
+              </div>
+              <Select
+                value={String(config.refreshInterval ?? 30)}
+                onValueChange={(value) => updateConfig({ refreshInterval: Number(value) })}
+              >
+                <SelectTrigger className="w-[180px] bg-white/10 border-white/20 text-white">
+                  <SelectValue placeholder="Select interval" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="15">15 minutes</SelectItem>
+                  <SelectItem value="30">30 minutes</SelectItem>
+                  <SelectItem value="60">1 hour</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           )}
         </CardContent>
