@@ -1,4 +1,3 @@
-
 interface OpenWeatherData {
   temperature: number;
   condition: string;
@@ -70,6 +69,52 @@ function degToCompass(num: number) {
   const val = Math.floor((num / 45) + 0.5) % 8;
   return directions[val];
 }
+
+export const geocodeLocation = async (query: string) => {
+  const apiKey = '31fcb172502b94e6534cc6bc72352259';
+  if (!apiKey) {
+      console.error("OpenWeather API key is not set.");
+      return null;
+  }
+  const url = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=1&appid=${apiKey}`;
+  try {
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data && data.length > 0) {
+          const { lat, lon, name, country, state } = data[0];
+          const displayName = [name, state, country].filter(Boolean).join(', ');
+          return { latitude: lat, longitude: lon, name: displayName };
+      }
+      return null;
+  } catch (error) {
+      console.error('Geocoding error:', error);
+      return null;
+  }
+};
+
+export const searchLocations = async (query: string, limit = 5) => {
+  const apiKey = '31fcb172502b94e6534cc6bc72352259';
+  if (!apiKey) {
+      console.error("OpenWeather API key is not set.");
+      return [];
+  }
+  const url = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=${limit}&appid=${apiKey}`;
+  try {
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data && data.length > 0) {
+          return data.map((item: any) => {
+              const { lat, lon, name, country, state } = item;
+              const displayName = [name, state, country].filter(Boolean).join(', ');
+              return { latitude: lat, longitude: lon, name: displayName };
+          });
+      }
+      return [];
+  } catch (error) {
+      console.error('Geocoding search error:', error);
+      return [];
+  }
+};
 
 export const getOpenWeatherData = async (latitude: number, longitude: number): Promise<OpenWeatherData> => {
   const apiKey = '31fcb172502b94e6534cc6bc72352259'; // Using the API key from .env

@@ -1,5 +1,4 @@
-
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 export interface CustomLocation {
   id: string;
@@ -27,8 +26,41 @@ export const useLocationContext = () => {
 };
 
 export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [customLocations, setCustomLocations] = useState<CustomLocation[]>([]);
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [customLocations, setCustomLocations] = useState<CustomLocation[]>(() => {
+    try {
+      const storedLocations = localStorage.getItem('customLocations');
+      return storedLocations ? JSON.parse(storedLocations) : [];
+    } catch (error) {
+      console.error("Error reading from localStorage", error);
+      return [];
+    }
+  });
+
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(() => {
+    try {
+      const storedId = localStorage.getItem('selectedLocationId');
+      return storedId ? JSON.parse(storedId) : null;
+    } catch (error) {
+      console.error("Error reading from localStorage", error);
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('customLocations', JSON.stringify(customLocations));
+    } catch (error) {
+      console.error("Error writing to localStorage", error);
+    }
+  }, [customLocations]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('selectedLocationId', JSON.stringify(selectedLocationId));
+    } catch (error) {
+      console.error("Error writing to localStorage", error);
+    }
+  }, [selectedLocationId]);
 
   const addCustomLocation = (location: Omit<CustomLocation, 'id'>) => {
     const newLocation: CustomLocation = {

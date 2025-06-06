@@ -5,13 +5,15 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { MapPin, Thermometer, Wind, Cloud, RefreshCw, Palette, Check, Sun, Droplets, Move } from 'lucide-react';
+import { MapPin, Thermometer, Wind, Cloud, RefreshCw, Palette, Check, Sun, Droplets, Move, Trash2 } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
 import { useWeatherData } from '@/hooks/useWeatherData';
 import { getWeatherIcon } from '@/utils/weatherUtils';
+import { useLocationContext } from '@/contexts/LocationContext';
+import { geocodeLocation, searchLocations } from '@/services/openWeatherService';
 
 // Expanded color presets with more shades
 const colorPresets = [
@@ -45,6 +47,11 @@ interface WeatherSettingsProps {
 
 const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) => {
   const { settings, updateWidgetSettings } = useSettings();
+  const { customLocations, addCustomLocation, removeCustomLocation } = useLocationContext();
+  const [newLocation, setNewLocation] = useState('');
+  const [isAddingLocation, setIsAddingLocation] = useState(false);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const widget = settings.widgets.find(w => w.id === 'weather');
   const config = widget?.config || {};
   const { weather, loading } = useWeatherData();
@@ -98,6 +105,61 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
       x: e.clientX - position.x,
       y: e.clientY - position.y
     };
+  };
+
+  useEffect(() => {
+    if (newLocation.trim().length > 2) {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+      debounceTimeout.current = setTimeout(async () => {
+        const results = await searchLocations(newLocation.trim());
+        setSuggestions(results);
+      }, 500); // 500ms debounce
+    } else {
+      setSuggestions([]);
+    }
+
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+    };
+  }, [newLocation]);
+
+  const handleAddLocation = async () => {
+    if (!newLocation.trim()) return;
+    setIsAddingLocation(true);
+    try {
+      const locationData = await geocodeLocation(newLocation.trim());
+      if (locationData) {
+        addCustomLocation({
+          name: locationData.name,
+          latitude: locationData.latitude,
+          longitude: locationData.longitude,
+        });
+        setNewLocation('');
+        setSuggestions([]);
+      } else {
+        // Here you might want to show a toast notification for better UX
+        alert(`Could not find location: ${newLocation}`);
+      }
+    } catch (error) {
+      console.error("Error adding location:", error);
+      alert("An error occurred while adding the location.");
+    } finally {
+      setIsAddingLocation(false);
+    }
+  };
+
+  const handleSelectLocation = (location: { name: string, latitude: number, longitude: number }) => {
+    addCustomLocation({
+      name: location.name,
+      latitude: location.latitude,
+      longitude: location.longitude,
+    });
+    setNewLocation('');
+    setSuggestions([]);
   };
 
   const updateConfig = (newConfig: any) => {
@@ -541,26 +603,71 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
             />
           </div>
 
-          {!config.useDeviceLocation && (
-            <div className="space-y-2">
-              <Label className="text-white">Manual Location</Label>
+          <div className="space-y-4 pt-4 border-t border-white/10">
+            <Label className="text-white text-base">Custom Locations</Label>
+            <div className="relative z-20">
               <div className="flex space-x-2">
                 <Input
-                  placeholder="Enter city name"
-                  value={config.manualLocation ?? ''}
-                  onChange={(e) => updateConfig({ manualLocation: e.target.value })}
+                  placeholder="Search By Town, City Or Postcode"
+                  value={newLocation}
+                  onChange={(e) => setNewLocation(e.target.value)}
                   className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                  disabled={isAddingLocation}
+                  autoComplete="off"
                 />
                 <Button 
                   variant="outline"
                   className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                  onClick={() => {/* Implement location search */}}
+                  onClick={handleAddLocation}
+                  disabled={isAddingLocation || !newLocation.trim()}
                 >
-                  Search
+                  {isAddingLocation ? 'Adding...' : 'Add'}
                 </Button>
               </div>
+              {suggestions.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-slate-800/90 backdrop-blur-md border border-white/10 rounded-md shadow-lg">
+                  {suggestions.map((loc, index) => {
+                    const parts = loc.name.split(new RegExp(`(${newLocation})`, 'gi'));
+                    return (
+                      <div
+                        key={index}
+                        className="p-2 text-white hover:bg-white/10 cursor-pointer"
+                        onClick={() => handleSelectLocation(loc)}
+                      >
+                        <span>
+                          {parts.map((part: string, i: number) =>
+                            part.toLowerCase() === newLocation.toLowerCase() ? (
+                              <strong key={i}>{part}</strong>
+                            ) : (
+                              part
+                            )
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
+            <div className="space-y-2">
+              {customLocations.map((location) => (
+                <div key={location.id} className="flex items-center justify-between p-2 bg-white/5 rounded-md">
+                  <span className="text-white">{location.name}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => removeCustomLocation(location.id)}
+                    className="text-red-400 hover:bg-red-400/10 hover:text-red-300"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              {customLocations.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-2">No custom locations added.</p>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
 

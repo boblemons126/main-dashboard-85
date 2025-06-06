@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useLocationContext } from '../../contexts/LocationContext';
+import { useSettings } from '@/contexts/SettingsContext';
 
 interface LocationDropdownProps {
   currentLocation: string;
@@ -21,6 +22,9 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
   onLocationChange 
 }) => {
   const { customLocations, selectedLocationId } = useLocationContext();
+  const { settings } = useSettings();
+  const widget = settings.widgets.find(w => w.id === 'weather');
+  const config = widget?.config || {};
 
   const handleValueChange = (value: string) => {
     if (value === 'current') {
@@ -58,17 +62,19 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
           </div>
         </SelectTrigger>
         <SelectContent className="bg-white/90 backdrop-blur-sm border border-white/20 shadow-lg rounded-lg">
-          <SelectItem value="current" className="cursor-pointer hover:bg-white/20">
+          {config.useDeviceLocation !== false && (
+            <SelectItem value="current" className="cursor-pointer hover:bg-white/20">
               <div className="flex items-center space-x-2">
                 <MapPin className="w-4 h-4" />
-              <div>
-                <span className="font-medium">{currentLocation}</span>
-                {currentCounty && (
-                  <span className="text-sm text-gray-600 ml-1">{currentCounty}</span>
-                )}
+                <div>
+                  <span className="font-medium">{currentLocation}</span>
+                  {currentCounty && (
+                    <span className="text-sm text-gray-600 ml-1">{currentCounty}</span>
+                  )}
+                </div>
               </div>
-            </div>
-          </SelectItem>
+            </SelectItem>
+          )}
           {customLocations.map((location) => (
             <SelectItem key={location.id} value={location.id} className="cursor-pointer hover:bg-white/20">
               <div className="flex items-center space-x-2">
