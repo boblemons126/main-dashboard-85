@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { MapPin, Thermometer, Wind, Cloud, RefreshCw, Palette, Check, Sun, Droplets } from 'lucide-react';
+import { MapPin, Thermometer, Wind, Cloud, RefreshCw, Palette, Check, Sun, Droplets, GripHorizontal } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
+import { useWeatherData } from '@/hooks/useWeatherData';
+import { getWeatherIcon } from '@/utils/weatherUtils';
 
 // Expanded color presets with more shades
 const colorPresets = [
@@ -43,16 +45,22 @@ interface WeatherSettingsProps {
 
 const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) => {
   const { settings, updateWidgetSettings } = useSettings();
+  const { weather, loading } = useWeatherData();
   const widget = settings.widgets.find(w => w.id === 'weather');
   const config = widget?.config || {};
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState('picker');
   const [hoveredColor, setHoveredColor] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const dragHandleRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   
   // HSL state for color picker
   const [hue, setHue] = useState(0);
   const [saturation, setSaturation] = useState(100);
   const [lightness, setLightness] = useState(50);
+  const [glowAmount, setGlowAmount] = useState(config.glowAmount ?? 30);
 
   const updateConfig = (newConfig: any) => {
     const updatedWidgets = settings.widgets.map(w => {
@@ -84,70 +92,143 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
     updateConfig({ customBackgroundColor: hex });
   };
 
-  // Weather widget preview component
-  const WeatherWidgetPreview = ({ color }: { color: string }) => (
-    <div 
-      className="relative rounded-xl p-4 text-white shadow-lg overflow-hidden"
-      style={{
-        background: `linear-gradient(135deg, ${color}, ${color}dd, ${color}bb)`,
-        boxShadow: `0 0 30px ${color}66, 0 0 60px ${color}33`
-      }}
-    >
-      {/* Background decoration */}
-      <div className="absolute inset-0 bg-black/10"></div>
-      <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/5 rounded-full"></div>
-      <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-white/5 rounded-full"></div>
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (dragHandleRef.current?.contains(e.target as Node)) {
+      setIsDragging(true);
       
-      <div className="relative z-10">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-start space-x-1">
-            <MapPin className="w-3 h-3 mt-0.5" />
-          </div>
-        </div>
+      // Get the popover element's current position
+      const popover = popoverRef.current;
+      if (popover) {
+        const rect = popover.getBoundingClientRect();
+        setDragOffset({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        });
+      }
+    }
+  };
 
-        {/* Current weather */}
-        <div className="flex items-center space-x-3 mb-4">
-          <Sun className="w-10 h-10" />
-          <div>
-            <div className="text-2xl font-bold">22°</div>
-            <div className="text-xs opacity-80">Sunny</div>
-            <div className="text-xs opacity-70">Feels like 24°</div>
-          </div>
-        </div>
+  const handleMouseMove = (e: MouseEvent) => {
+    if (isDragging && popoverRef.current) {
+      const newX = e.clientX - dragOffset.x;
+      const newY = e.clientY - dragOffset.y;
+      
+      popoverRef.current.style.position = 'fixed';
+      popoverRef.current.style.left = `${newX}px`;
+      popoverRef.current.style.top = `${newY}px`;
+      popoverRef.current.style.zIndex = '9999';
+    }
+  };
 
-        {/* Weather details */}
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          <div className="bg-white/15 backdrop-blur-sm rounded-lg p-2 text-center">
-            <Droplets className="w-3 h-3 mx-auto mb-1" />
-            <div className="text-xs opacity-80">Humidity</div>
-            <div className="font-semibold text-sm">65%</div>
-          </div>
-          <div className="bg-white/15 backdrop-blur-sm rounded-lg p-2 text-center">
-            <Wind className="w-3 h-3 mx-auto mb-1" />
-            <div className="text-xs opacity-80">Wind</div>
-            <div className="font-semibold text-sm">12 mph</div>
-          </div>
-          <div className="bg-white/15 backdrop-blur-sm rounded-lg p-2 text-center">
-            <Sun className="w-3 h-3 mx-auto mb-1" />
-            <div className="text-xs opacity-80">Sunset</div>
-            <div className="font-semibold text-sm">6:30 PM</div>
-          </div>
-        </div>
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
 
-        {/* Mini forecast */}
-        <div className="flex space-x-2">
-          {[1, 2, 3, 4].map((_, index) => (
-            <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-1.5 text-center min-w-0 flex-1">
-              <div className="text-xs opacity-80">{12 + index}:00</div>
-              <Sun className="w-3 h-3 mx-auto my-1" />
-              <div className="text-xs font-semibold">{22 + index}°</div>
+  React.useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging, dragOffset]);
+
+  // Weather widget preview component with default glow
+  const WeatherWidgetPreview = ({ color }: { color: string }) => {
+    const defaultGlow = 15; // Default glow amount for visual aesthetics
+    
+    if (loading || !weather) {
+      return (
+        <div 
+          className="relative rounded-xl p-4 text-white shadow-lg overflow-hidden animate-pulse"
+          style={{
+            background: `linear-gradient(135deg, ${color}, ${color}dd, ${color}bb)`,
+            boxShadow: `0 0 ${defaultGlow}px ${color}66, 0 0 ${defaultGlow * 2}px ${color}33`
+          }}
+        >
+          <div className="space-y-3">
+            <div className="h-4 bg-white/20 rounded w-3/4"></div>
+            <div className="h-8 bg-white/20 rounded w-1/2"></div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="h-12 bg-white/20 rounded"></div>
+              <div className="h-12 bg-white/20 rounded"></div>
+              <div className="h-12 bg-white/20 rounded"></div>
             </div>
-          ))}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div 
+        className="relative rounded-xl p-4 text-white shadow-lg overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, ${color}, ${color}dd, ${color}bb)`,
+          boxShadow: `0 0 ${defaultGlow}px ${color}66, 0 0 ${defaultGlow * 2}px ${color}33`
+        }}
+      >
+        {/* Background decoration */}
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/5 rounded-full"></div>
+        <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-white/5 rounded-full"></div>
+        
+        <div className="relative z-10">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start space-x-1">
+              <MapPin className="w-3 h-3 mt-0.5" />
+              <div>
+                <div className="font-semibold text-sm leading-tight">{weather.location}</div>
+                {weather.county && <div className="text-xs opacity-70">{weather.county}</div>}
+              </div>
+            </div>
+          </div>
+
+          {/* Current weather */}
+          <div className="flex items-center space-x-3 mb-4">
+            {getWeatherIcon(weather.condition, "w-10 h-10")}
+            <div>
+              <div className="text-2xl font-bold">{weather.temperature}°</div>
+              <div className="text-xs opacity-80 capitalize">{weather.description}</div>
+              <div className="text-xs opacity-70">Feels like {weather.feelsLike}°</div>
+            </div>
+          </div>
+
+          {/* Weather details */}
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            <div className="bg-white/15 backdrop-blur-sm rounded-lg p-2 text-center">
+              <Droplets className="w-3 h-3 mx-auto mb-1" />
+              <div className="text-xs opacity-80">Humidity</div>
+              <div className="font-semibold text-sm">{weather.humidity}%</div>
+            </div>
+            <div className="bg-white/15 backdrop-blur-sm rounded-lg p-2 text-center">
+              <Wind className="w-3 h-3 mx-auto mb-1" />
+              <div className="text-xs opacity-80">Wind</div>
+              <div className="font-semibold text-sm">{weather.windSpeed} mph</div>
+            </div>
+            <div className="bg-white/15 backdrop-blur-sm rounded-lg p-2 text-center">
+              <Sun className="w-3 h-3 mx-auto mb-1" />
+              <div className="text-xs opacity-80">Sunset</div>
+              <div className="font-semibold text-sm">{weather.sunset}</div>
+            </div>
+          </div>
+
+          {/* Mini forecast */}
+          <div className="flex space-x-2">
+            {weather.hourlyForecast.slice(0, 4).map((hour, index) => (
+              <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-1.5 text-center min-w-0 flex-1">
+                <div className="text-xs opacity-80">{hour.hour}</div>
+                {getWeatherIcon(hour.condition, "w-3 h-3 mx-auto my-1")}
+                <div className="text-xs font-semibold">{hour.temperature}°</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -187,8 +268,7 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                       className="w-[140px] h-8 border-2 relative group"
                       style={{
                         backgroundColor: config.customBackgroundColor ?? '#1e3a8a',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        boxShadow: `0 0 20px ${config.customBackgroundColor ?? '#1e3a8a'}66, 0 0 40px ${config.customBackgroundColor ?? '#1e3a8a'}33`
+                        borderColor: 'rgba(255, 255, 255, 0.2)'
                       }}
                     >
                       <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
@@ -201,136 +281,156 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                       </div>
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80 p-4 bg-slate-900/95 backdrop-blur-xl border-white/10 shadow-2xl shadow-black/40">
-                    <Tabs defaultValue="picker" value={selectedTab} onValueChange={setSelectedTab}>
-                      <TabsList className="grid w-full grid-cols-2 bg-slate-800/50">
-                        <TabsTrigger value="picker" className="text-white data-[state=active]:bg-slate-700">
-                          Color Picker
-                        </TabsTrigger>
-                        <TabsTrigger value="presets" className="text-white data-[state=active]:bg-slate-700">
-                          Presets
-                        </TabsTrigger>
-                      </TabsList>
-                      <div className="mt-4">
-                        <TabsContent value="picker" className="mt-0">
-                          <div className="space-y-4">
-                            <div>
-                              <Label className="text-white mb-2 block font-medium">Hue</Label>
-                              <div className="h-4 rounded-lg mb-2" style={{
-                                background: `linear-gradient(to right, ${hueGradient.join(', ')})`
-                              }} />
-                              <Slider
-                                value={[hue]}
-                                min={0}
-                                max={360}
-                                step={1}
-                                onValueChange={(value) => {
-                                  setHue(value[0]);
-                                  updateFromHSL();
-                                }}
-                                className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-white mb-2 block font-medium">Saturation</Label>
-                              <div className="h-4 rounded-lg mb-2" style={{
-                                background: `linear-gradient(to right, 
-                                  hsl(${hue}, 0%, ${lightness}%), 
-                                  hsl(${hue}, 100%, ${lightness}%))`
-                              }} />
-                              <Slider
-                                value={[saturation]}
-                                min={0}
-                                max={100}
-                                step={1}
-                                onValueChange={(value) => {
-                                  setSaturation(value[0]);
-                                  updateFromHSL();
-                                }}
-                                className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-white mb-2 block font-medium">Lightness</Label>
-                              <div className="h-4 rounded-lg mb-2" style={{
-                                background: `linear-gradient(to right, 
-                                  hsl(${hue}, ${saturation}%, 0%), 
-                                  hsl(${hue}, ${saturation}%, 100%))`
-                              }} />
-                              <Slider
-                                value={[lightness]}
-                                min={0}
-                                max={100}
-                                step={1}
-                                onValueChange={(value) => {
-                                  setLightness(value[0]);
-                                  updateFromHSL();
-                                }}
-                                className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-white block font-medium">Weather Widget Preview</Label>
-                              <WeatherWidgetPreview color={hslToHex(hue, saturation, lightness)} />
-                            </div>
-                          </div>
-                        </TabsContent>
-                        <TabsContent value="presets" className="mt-0">
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-3 gap-3">
-                              {colorPresets.map((color) => (
-                                <Button
-                                  key={color.value}
-                                  variant="outline"
-                                  className="relative group p-0 h-12 border-2 rounded-lg overflow-hidden transition-all duration-200"
-                                  style={{
-                                    backgroundColor: color.value,
-                                    borderColor: config.customBackgroundColor === color.value 
-                                      ? 'white' 
-                                      : 'rgba(255, 255, 255, 0.1)',
-                                    boxShadow: hoveredColor === color.value 
-                                      ? `0 0 20px ${color.value}33` 
-                                      : 'none'
+                  <PopoverContent 
+                    ref={popoverRef}
+                    className="w-80 p-0 bg-slate-900/95 backdrop-blur-xl border-white/10 shadow-2xl shadow-black/40"
+                  >
+                    {/* Drag handle */}
+                    <div 
+                      ref={dragHandleRef}
+                      className="flex items-center justify-center p-2 border-b border-white/10 cursor-move bg-slate-800/50"
+                      onMouseDown={handleMouseDown}
+                    >
+                      <GripHorizontal className="w-4 h-4 text-white/50" />
+                    </div>
+                    
+                    <div className="p-4">
+                      <Tabs defaultValue="picker" value={selectedTab} onValueChange={setSelectedTab}>
+                        <TabsList className="grid w-full grid-cols-2 bg-slate-800/50">
+                          <TabsTrigger value="picker" className="text-white data-[state=active]:bg-slate-700">
+                            Color Picker
+                          </TabsTrigger>
+                          <TabsTrigger value="presets" className="text-white data-[state=active]:bg-slate-700">
+                            Presets
+                          </TabsTrigger>
+                        </TabsList>
+                        <div className="mt-4">
+                          <TabsContent value="picker" className="mt-0">
+                            <div className="space-y-4">
+                              <div>
+                                <Label className="text-white mb-2 block font-medium">Hue</Label>
+                                <div className="h-4 rounded-lg mb-2" style={{
+                                  background: `linear-gradient(to right, ${hueGradient.join(', ')})`
+                                }} />
+                                <Slider
+                                  value={[hue]}
+                                  min={0}
+                                  max={360}
+                                  step={1}
+                                  onValueChange={(value) => {
+                                    if (!isDragging) {
+                                      setHue(value[0]);
+                                      updateFromHSL();
+                                    }
                                   }}
-                                  onClick={() => updateConfig({ customBackgroundColor: color.value })}
-                                  onPointerEnter={() => setHoveredColor(color.value)}
-                                  onPointerLeave={() => setHoveredColor(null)}
-                                >
-                                  <div 
-                                    className="absolute inset-0 transition-opacity duration-200"
+                                  className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-white mb-2 block font-medium">Saturation</Label>
+                                <div className="h-4 rounded-lg mb-2" style={{
+                                  background: `linear-gradient(to right, 
+                                    hsl(${hue}, 0%, ${lightness}%), 
+                                    hsl(${hue}, 100%, ${lightness}%))`
+                                }} />
+                                <Slider
+                                  value={[saturation]}
+                                  min={0}
+                                  max={100}
+                                  step={1}
+                                  onValueChange={(value) => {
+                                    if (!isDragging) {
+                                      setSaturation(value[0]);
+                                      updateFromHSL();
+                                    }
+                                  }}
+                                  className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-white mb-2 block font-medium">Lightness</Label>
+                                <div className="h-4 rounded-lg mb-2" style={{
+                                  background: `linear-gradient(to right, 
+                                    hsl(${hue}, ${saturation}%, 0%), 
+                                    hsl(${hue}, ${saturation}%, 100%))`
+                                }} />
+                                <Slider
+                                  value={[lightness]}
+                                  min={0}
+                                  max={100}
+                                  step={1}
+                                  onValueChange={(value) => {
+                                    if (!isDragging) {
+                                      setLightness(value[0]);
+                                      updateFromHSL();
+                                    }
+                                  }}
+                                  className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-white block font-medium">Live Weather Preview</Label>
+                                <WeatherWidgetPreview color={hslToHex(hue, saturation, lightness)} />
+                              </div>
+                            </div>
+                          </TabsContent>
+                          <TabsContent value="presets" className="mt-0">
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-3 gap-3">
+                                {colorPresets.map((color) => (
+                                  <Button
+                                    key={color.value}
+                                    variant="outline"
+                                    className="relative group p-0 h-12 border-2 rounded-lg overflow-hidden transition-all duration-200"
                                     style={{
-                                      backgroundColor: hoveredColor === color.value 
-                                        ? `${color.value}33`
-                                        : 'transparent'
+                                      backgroundColor: color.value,
+                                      borderColor: config.customBackgroundColor === color.value 
+                                        ? 'white' 
+                                        : 'rgba(255, 255, 255, 0.1)',
+                                      boxShadow: hoveredColor === color.value 
+                                        ? `0 0 20px ${color.value}33` 
+                                        : 'none'
                                     }}
-                                  />
-                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <span 
-                                      className="text-white text-xs font-medium px-2 py-1 rounded-full"
+                                    onClick={() => updateConfig({ customBackgroundColor: color.value })}
+                                    onPointerEnter={() => setHoveredColor(color.value)}
+                                    onPointerLeave={() => setHoveredColor(null)}
+                                  >
+                                    <div 
+                                      className="absolute inset-0 transition-opacity duration-200"
                                       style={{
                                         backgroundColor: hoveredColor === color.value 
-                                          ? `${color.value}99`
-                                          : 'rgba(0, 0, 0, 0.4)'
+                                          ? `${color.value}33`
+                                          : 'transparent'
                                       }}
-                                    >
-                                      {color.name}
-                                    </span>
-                                  </div>
-                                </Button>
-                              ))}
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <span 
+                                        className="text-white text-xs font-medium px-2 py-1 rounded-full"
+                                        style={{
+                                          backgroundColor: hoveredColor === color.value 
+                                            ? `${color.value}99`
+                                            : 'rgba(0, 0, 0, 0.4)'
+                                        }}
+                                      >
+                                        {color.name}
+                                      </span>
+                                    </div>
+                                  </Button>
+                                ))}
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-white block font-medium">Live Weather Preview</Label>
+                                <WeatherWidgetPreview color={config.customBackgroundColor ?? '#1e3a8a'} />
+                              </div>
                             </div>
-                            <div className="space-y-2">
-                              <Label className="text-white block font-medium">Weather Widget Preview</Label>
-                              <WeatherWidgetPreview color={config.customBackgroundColor ?? '#1e3a8a'} />
-                            </div>
-                          </div>
-                        </TabsContent>
+                          </TabsContent>
+                        </div>
+                      </Tabs>
+                      <div className="mt-4 pt-3 border-t border-white/10">
+                        <p className="text-xs text-blue-200">
+                          Preview shows live weather data from your current location
+                        </p>
                       </div>
-                    </Tabs>
-                    <div className="mt-4 pt-3 border-t border-white/10">
-                      <p className="text-xs text-blue-200">
-                        Tip: Use the color picker for precise control or choose from presets
-                      </p>
                     </div>
                   </PopoverContent>
                 </Popover>
