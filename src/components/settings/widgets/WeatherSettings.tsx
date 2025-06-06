@@ -51,10 +51,6 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState('picker');
   const [hoveredColor, setHoveredColor] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const dragHandleRef = useRef<HTMLDivElement>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
   
   // HSL state for color picker
   const [hue, setHue] = useState(0);
@@ -91,49 +87,6 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
     const hex = hslToHex(hue, saturation, lightness);
     updateConfig({ customBackgroundColor: hex });
   };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (dragHandleRef.current?.contains(e.target as Node)) {
-      setIsDragging(true);
-      
-      // Get the popover element's current position
-      const popover = popoverRef.current;
-      if (popover) {
-        const rect = popover.getBoundingClientRect();
-        setDragOffset({
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top
-        });
-      }
-    }
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (isDragging && popoverRef.current) {
-      const newX = e.clientX - dragOffset.x;
-      const newY = e.clientY - dragOffset.y;
-      
-      popoverRef.current.style.position = 'fixed';
-      popoverRef.current.style.left = `${newX}px`;
-      popoverRef.current.style.top = `${newY}px`;
-      popoverRef.current.style.zIndex = '9999';
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  React.useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging, dragOffset]);
 
   // Weather widget preview component with default glow
   const WeatherWidgetPreview = ({ color }: { color: string }) => {
@@ -281,19 +234,7 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                       </div>
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent 
-                    ref={popoverRef}
-                    className="w-80 p-0 bg-slate-900/95 backdrop-blur-xl border-white/10 shadow-2xl shadow-black/40"
-                  >
-                    {/* Drag handle */}
-                    <div 
-                      ref={dragHandleRef}
-                      className="flex items-center justify-center p-2 border-b border-white/10 cursor-move bg-slate-800/50"
-                      onMouseDown={handleMouseDown}
-                    >
-                      <GripHorizontal className="w-4 h-4 text-white/50" />
-                    </div>
-                    
+                  <PopoverContent className="w-80 p-0 bg-slate-900/95 backdrop-blur-xl border-white/10 shadow-2xl shadow-black/40">
                     <div className="p-4">
                       <Tabs defaultValue="picker" value={selectedTab} onValueChange={setSelectedTab}>
                         <TabsList className="grid w-full grid-cols-2 bg-slate-800/50">
@@ -318,10 +259,8 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                                   max={360}
                                   step={1}
                                   onValueChange={(value) => {
-                                    if (!isDragging) {
-                                      setHue(value[0]);
-                                      updateFromHSL();
-                                    }
+                                    setHue(value[0]);
+                                    updateFromHSL();
                                   }}
                                   className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
                                 />
@@ -339,10 +278,8 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                                   max={100}
                                   step={1}
                                   onValueChange={(value) => {
-                                    if (!isDragging) {
-                                      setSaturation(value[0]);
-                                      updateFromHSL();
-                                    }
+                                    setSaturation(value[0]);
+                                    updateFromHSL();
                                   }}
                                   className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
                                 />
@@ -360,10 +297,8 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                                   max={100}
                                   step={1}
                                   onValueChange={(value) => {
-                                    if (!isDragging) {
-                                      setLightness(value[0]);
-                                      updateFromHSL();
-                                    }
+                                    setLightness(value[0]);
+                                    updateFromHSL();
                                   }}
                                   className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
                                 />
