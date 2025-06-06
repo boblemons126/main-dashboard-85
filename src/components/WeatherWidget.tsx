@@ -101,14 +101,40 @@ const WeatherWidget = () => {
   };
 
   const getBackgroundStyle = () => {
+    const glowAmount = weatherSettings.glowAmount ?? 30;
+    
     // Use custom color if one is set, regardless of colourTest setting
     if (weatherSettings.customBackgroundColor) {
       const color = weatherSettings.customBackgroundColor;
       return {
-        background: `linear-gradient(135deg, ${color}, ${color}dd, ${color}bb)`
+        background: `linear-gradient(135deg, ${color}, ${color}dd, ${color}bb)`,
+        boxShadow: `0 0 ${glowAmount}px ${color}66, 0 0 ${glowAmount * 2}px ${color}33`
       };
     }
-    return {};
+    
+    // For weather-based colors, create a glow effect
+    const condition = weather?.condition || 'clear';
+    const baseColor = getWeatherBaseColor(condition);
+    return {
+      boxShadow: `0 0 ${glowAmount}px ${baseColor}66, 0 0 ${glowAmount * 2}px ${baseColor}33`
+    };
+  };
+
+  const getWeatherBaseColor = (condition: string) => {
+    const conditionLower = condition.toLowerCase();
+    if (conditionLower.includes('clear') || conditionLower.includes('sunny')) {
+      return '#3b82f6'; // blue
+    } else if (conditionLower.includes('cloud')) {
+      return '#6b7280'; // gray
+    } else if (conditionLower.includes('rain') || conditionLower.includes('drizzle')) {
+      return '#1e40af'; // dark blue
+    } else if (conditionLower.includes('snow')) {
+      return '#60a5fa'; // light blue
+    } else if (conditionLower.includes('thunder')) {
+      return '#374151'; // dark gray
+    } else {
+      return '#3b82f6'; // default blue
+    }
   };
 
   const getBackgroundClass = () => {

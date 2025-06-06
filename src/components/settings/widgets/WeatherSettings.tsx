@@ -56,6 +56,7 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
   const [hue, setHue] = useState(0);
   const [saturation, setSaturation] = useState(100);
   const [lightness, setLightness] = useState(50);
+  const [glowAmount, setGlowAmount] = useState(config.glowAmount ?? 30);
 
   const updateConfig = (newConfig: any) => {
     const updatedWidgets = settings.widgets.map(w => {
@@ -88,14 +89,14 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
   };
 
   // Weather widget preview component using real data
-  const WeatherWidgetPreview = ({ color }: { color: string }) => {
+  const WeatherWidgetPreview = ({ color, glow }: { color: string, glow: number }) => {
     if (loading || !weather) {
       return (
         <div 
           className="relative rounded-xl p-4 text-white shadow-lg overflow-hidden animate-pulse"
           style={{
             background: `linear-gradient(135deg, ${color}, ${color}dd, ${color}bb)`,
-            boxShadow: `0 0 30px ${color}66, 0 0 60px ${color}33`
+            boxShadow: `0 0 ${glow}px ${color}66, 0 0 ${glow * 2}px ${color}33`
           }}
         >
           <div className="space-y-3">
@@ -116,7 +117,7 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
         className="relative rounded-xl p-4 text-white shadow-lg overflow-hidden"
         style={{
           background: `linear-gradient(135deg, ${color}, ${color}dd, ${color}bb)`,
-          boxShadow: `0 0 30px ${color}66, 0 0 60px ${color}33`
+          boxShadow: `0 0 ${glow}px ${color}66, 0 0 ${glow * 2}px ${color}33`
         }}
       >
         {/* Background decoration */}
@@ -300,9 +301,24 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                                 className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
                               />
                             </div>
+                            <div>
+                              <Label className="text-white mb-2 block font-medium">Glow Amount</Label>
+                              <div className="h-4 rounded-lg mb-2 bg-gradient-to-r from-transparent via-white/30 to-white/80" />
+                              <Slider
+                                value={[glowAmount]}
+                                min={0}
+                                max={60}
+                                step={1}
+                                onValueChange={(value) => {
+                                  setGlowAmount(value[0]);
+                                  updateConfig({ glowAmount: value[0] });
+                                }}
+                                className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
+                              />
+                            </div>
                             <div className="space-y-2">
                               <Label className="text-white block font-medium">Live Weather Preview</Label>
-                              <WeatherWidgetPreview color={hslToHex(hue, saturation, lightness)} />
+                              <WeatherWidgetPreview color={hslToHex(hue, saturation, lightness)} glow={glowAmount} />
                             </div>
                           </div>
                         </TabsContent>
@@ -350,9 +366,23 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
                                 </Button>
                               ))}
                             </div>
+                            <div>
+                              <Label className="text-white mb-2 block font-medium">Glow Amount</Label>
+                              <Slider
+                                value={[glowAmount]}
+                                min={0}
+                                max={60}
+                                step={1}
+                                onValueChange={(value) => {
+                                  setGlowAmount(value[0]);
+                                  updateConfig({ glowAmount: value[0] });
+                                }}
+                                className="mb-4 [&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
+                              />
+                            </div>
                             <div className="space-y-2">
                               <Label className="text-white block font-medium">Live Weather Preview</Label>
-                              <WeatherWidgetPreview color={config.customBackgroundColor ?? '#1e3a8a'} />
+                              <WeatherWidgetPreview color={config.customBackgroundColor ?? '#1e3a8a'} glow={glowAmount} />
                             </div>
                           </div>
                         </TabsContent>
