@@ -103,10 +103,6 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-start space-x-1">
             <MapPin className="w-3 h-3 mt-0.5" />
-            <div>
-              <div className="font-semibold text-sm">London</div>
-              <div className="text-xs opacity-70">England</div>
-            </div>
           </div>
         </div>
 
