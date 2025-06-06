@@ -56,6 +56,25 @@ const WeatherWidget = () => {
     }
   };
 
+  const celsiusToFahrenheit = (celsius: number) => Math.round(celsius * 9 / 5 + 32);
+
+  const temperatureUnit = weatherSettings.temperatureUnit ?? 'celsius';
+
+  const convertedWeather = weather && {
+    ...weather,
+    temperature: temperatureUnit === 'fahrenheit' ? celsiusToFahrenheit(weather.temperature) : weather.temperature,
+    feelsLike: temperatureUnit === 'fahrenheit' ? celsiusToFahrenheit(weather.feelsLike) : weather.feelsLike,
+    hourlyForecast: weather.hourlyForecast.map(hour => ({
+      ...hour,
+      temperature: temperatureUnit === 'fahrenheit' ? celsiusToFahrenheit(hour.temperature) : hour.temperature,
+    })),
+    dailyForecast: weather.dailyForecast.map(day => ({
+      ...day,
+      high: temperatureUnit === 'fahrenheit' ? celsiusToFahrenheit(day.high) : day.high,
+      low: temperatureUnit === 'fahrenheit' ? celsiusToFahrenheit(day.low) : day.low,
+    })),
+  };
+
   if (loading) {
     return (
       <div className="bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-xl">
@@ -94,7 +113,7 @@ const WeatherWidget = () => {
     );
   }
 
-  if (!weather) return null;
+  if (!convertedWeather) return null;
 
   return (
     <div 
@@ -111,8 +130,8 @@ const WeatherWidget = () => {
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-start space-x-1 mt-1">
             <WeatherHeader 
-              location={weather.location}
-              county={weather.county}
+              location={convertedWeather.location}
+              county={convertedWeather.county}
               onRefresh={refetch}
               onLocationChange={onLocationChange}
               hideRefreshButton={true}
@@ -126,17 +145,17 @@ const WeatherWidget = () => {
         </div>
         
         <CurrentWeather 
-          temperature={weather.temperature}
-          condition={weather.condition}
-          description={weather.description}
-          feelsLike={weather.feelsLike}
+          temperature={convertedWeather.temperature}
+          condition={convertedWeather.condition}
+          description={convertedWeather.description}
+          feelsLike={convertedWeather.feelsLike}
         />
         
         <WeatherDetails 
-          humidity={weather.humidity}
-          windSpeed={weather.windSpeed}
-          windDirection={weather.windDirection}
-          sunset={weather.sunset}
+          humidity={convertedWeather.humidity}
+          windSpeed={convertedWeather.windSpeed}
+          windDirection={convertedWeather.windDirection}
+          sunset={convertedWeather.sunset}
         />
         
         <ForecastToggle 
@@ -146,8 +165,8 @@ const WeatherWidget = () => {
         
         <WeatherForecast 
           showHourly={showHourly}
-          hourlyForecast={weather.hourlyForecast}
-          dailyForecast={weather.dailyForecast}
+          hourlyForecast={convertedWeather.hourlyForecast}
+          dailyForecast={convertedWeather.dailyForecast}
         />
         
         {lastUpdated && (

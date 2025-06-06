@@ -1,11 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { MapPin, Thermometer, Wind, Cloud, RefreshCw, Palette, Check, Sun, Droplets, GripHorizontal } from 'lucide-react';
+import { MapPin, Thermometer, Wind, Cloud, RefreshCw, Palette, Check, Sun, Droplets, Move } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -45,9 +45,9 @@ interface WeatherSettingsProps {
 
 const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) => {
   const { settings, updateWidgetSettings } = useSettings();
-  const { weather, loading } = useWeatherData();
   const widget = settings.widgets.find(w => w.id === 'weather');
   const config = widget?.config || {};
+  const { weather, loading } = useWeatherData();
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState('picker');
   const [hoveredColor, setHoveredColor] = useState<string | null>(null);
@@ -56,7 +56,49 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
   const [hue, setHue] = useState(0);
   const [saturation, setSaturation] = useState(100);
   const [lightness, setLightness] = useState(50);
-  const [glowAmount, setGlowAmount] = useState(config.glowAmount ?? 30);
+
+  // State and ref for draggable popover
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      setPosition({
+        x: e.clientX - dragOffset.current.x,
+        y: e.clientY - dragOffset.current.y
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    const body = document.body;
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      body.style.cursor = 'move';
+      body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      body.style.cursor = '';
+      body.style.userSelect = '';
+    };
+  }, [isDragging]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    dragOffset.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    };
+  };
 
   const updateConfig = (newConfig: any) => {
     const updatedWidgets = settings.widgets.map(w => {
@@ -88,10 +130,18 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
     updateConfig({ customBackgroundColor: hex });
   };
 
-  // Weather widget preview component with default glow
   const WeatherWidgetPreview = ({ color }: { color: string }) => {
     const defaultGlow = 15; // Default glow amount for visual aesthetics
     
+    const celsiusToFahrenheit = (celsius: number) => Math.round(celsius * 9 / 5 + 32);
+    const temperatureUnit = config.temperatureUnit ?? 'celsius';
+    const displayTemperature = (celsius: number) => {
+      if (temperatureUnit === 'fahrenheit') {
+        return celsiusToFahrenheit(celsius);
+      }
+      return celsius;
+    };
+
     if (loading || !weather) {
       return (
         <div 
@@ -143,9 +193,9 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
           <div className="flex items-center space-x-3 mb-4">
             {getWeatherIcon(weather.condition, "w-10 h-10")}
             <div>
-              <div className="text-2xl font-bold">{weather.temperature}°</div>
+              <div className="text-2xl font-bold">{displayTemperature(weather.temperature)}°</div>
               <div className="text-xs opacity-80 capitalize">{weather.description}</div>
-              <div className="text-xs opacity-70">Feels like {weather.feelsLike}°</div>
+              <div className="text-xs opacity-70">Feels like {displayTemperature(weather.feelsLike)}°</div>
             </div>
           </div>
 
@@ -174,7 +224,7 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
               <div key={index} className="bg-white/15 backdrop-blur-sm rounded-lg p-1.5 text-center min-w-0 flex-1">
                 <div className="text-xs opacity-80">{hour.hour}</div>
                 {getWeatherIcon(hour.condition, "w-3 h-3 mx-auto my-1")}
-                <div className="text-xs font-semibold">{hour.temperature}°</div>
+                <div className="text-xs font-semibold">{displayTemperature(hour.temperature)}°</div>
               </div>
             ))}
           </div>
@@ -208,167 +258,200 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
           </div>
 
           {!config.useDynamicColoring && (
-            <div className="ml-6 pl-4 border-l-2 border-white/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-white">Custom Background Color</Label>
-                  <p className="text-sm text-gray-300">Override the weather-based background with a custom color</p>
-                </div>
-                <Popover open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-[140px] h-8 border-2 relative group"
-                      style={{
-                        backgroundColor: config.customBackgroundColor ?? '#1e3a8a',
-                        borderColor: 'rgba(255, 255, 255, 0.2)'
-                      }}
+            <div className="ml-6 flex items-stretch gap-4">
+              <div
+                className="w-0.5 rounded-full"
+                style={{
+                  backgroundColor: config.customBackgroundColor || 'rgba(255, 255, 255, 0.2)',
+                  boxShadow: `0 0 8px ${config.customBackgroundColor || 'transparent'}`,
+                }}
+              />
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-white">Custom Background Color</Label>
+                    <p className="text-sm text-gray-300">Override the weather-based background with a custom color</p>
+                  </div>
+                  <Popover 
+                    open={colorPickerOpen} 
+                    onOpenChange={(isOpen) => {
+                      setColorPickerOpen(isOpen);
+                      if (!isOpen) {
+                        setPosition({ x: 0, y: 0 });
+                        setIsDragging(false);
+                      }
+                    }}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-[140px] h-8 border-2 relative group"
+                        style={{
+                          backgroundColor: config.customBackgroundColor ?? '#1e3a8a',
+                          borderColor: 'rgba(255, 255, 255, 0.2)',
+                          boxShadow: `0 0 20px ${config.customBackgroundColor ?? '#1e3a8a'}66, 0 0 40px ${config.customBackgroundColor ?? '#1e3a8a'}33`
+                        }}
+                      >
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
+                        <div className="relative flex items-center justify-center">
+                          <div 
+                            className="w-4 h-4 rounded-full mr-2 border-2 border-white/20"
+                            style={{ backgroundColor: config.customBackgroundColor ?? '#1e3a8a' }}
+                          />
+                          <span className="text-white/90 text-sm">Select Color</span>
+                        </div>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-64 p-0 bg-slate-900/95 backdrop-blur-xl border-white/10 shadow-2xl shadow-black/40 rounded-lg overflow-hidden"
+                      style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
+                      onOpenAutoFocus={(e) => e.preventDefault()}
                     >
-                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
-                      <div className="relative flex items-center justify-center">
-                        <div 
-                          className="w-4 h-4 rounded-full mr-2 border-2 border-white/20"
-                          style={{ backgroundColor: config.customBackgroundColor ?? '#1e3a8a' }}
-                        />
-                        <span className="text-white/90 text-sm">Select Color</span>
+                      <div
+                        onMouseDown={handleMouseDown}
+                        className="flex items-center justify-center p-2 bg-slate-800/70 cursor-move text-white/50 text-xs"
+                      >
+                        <Move className="w-3 h-3 mr-2" />
+                        Drag to reposition
                       </div>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80 p-0 bg-slate-900/95 backdrop-blur-xl border-white/10 shadow-2xl shadow-black/40">
-                    <div className="p-4">
-                      <Tabs defaultValue="picker" value={selectedTab} onValueChange={setSelectedTab}>
-                        <TabsList className="grid w-full grid-cols-2 bg-slate-800/50">
-                          <TabsTrigger value="picker" className="text-white data-[state=active]:bg-slate-700">
-                            Color Picker
-                          </TabsTrigger>
-                          <TabsTrigger value="presets" className="text-white data-[state=active]:bg-slate-700">
-                            Presets
-                          </TabsTrigger>
-                        </TabsList>
-                        <div className="mt-4">
-                          <TabsContent value="picker" className="mt-0">
-                            <div className="space-y-4">
-                              <div>
-                                <Label className="text-white mb-2 block font-medium">Hue</Label>
-                                <div className="h-4 rounded-lg mb-2" style={{
-                                  background: `linear-gradient(to right, ${hueGradient.join(', ')})`
-                                }} />
-                                <Slider
-                                  value={[hue]}
-                                  min={0}
-                                  max={360}
-                                  step={1}
-                                  onValueChange={(value) => {
-                                    setHue(value[0]);
-                                    updateFromHSL();
-                                  }}
-                                  className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-white mb-2 block font-medium">Saturation</Label>
-                                <div className="h-4 rounded-lg mb-2" style={{
-                                  background: `linear-gradient(to right, 
-                                    hsl(${hue}, 0%, ${lightness}%), 
-                                    hsl(${hue}, 100%, ${lightness}%))`
-                                }} />
-                                <Slider
-                                  value={[saturation]}
-                                  min={0}
-                                  max={100}
-                                  step={1}
-                                  onValueChange={(value) => {
-                                    setSaturation(value[0]);
-                                    updateFromHSL();
-                                  }}
-                                  className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-white mb-2 block font-medium">Lightness</Label>
-                                <div className="h-4 rounded-lg mb-2" style={{
-                                  background: `linear-gradient(to right, 
-                                    hsl(${hue}, ${saturation}%, 0%), 
-                                    hsl(${hue}, ${saturation}%, 100%))`
-                                }} />
-                                <Slider
-                                  value={[lightness]}
-                                  min={0}
-                                  max={100}
-                                  step={1}
-                                  onValueChange={(value) => {
-                                    setLightness(value[0]);
-                                    updateFromHSL();
-                                  }}
-                                  className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label className="text-white block font-medium">Live Weather Preview</Label>
-                                <WeatherWidgetPreview color={hslToHex(hue, saturation, lightness)} />
-                              </div>
-                            </div>
-                          </TabsContent>
-                          <TabsContent value="presets" className="mt-0">
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-3 gap-3">
-                                {colorPresets.map((color) => (
-                                  <Button
-                                    key={color.value}
-                                    variant="outline"
-                                    className="relative group p-0 h-12 border-2 rounded-lg overflow-hidden transition-all duration-200"
-                                    style={{
-                                      backgroundColor: color.value,
-                                      borderColor: config.customBackgroundColor === color.value 
-                                        ? 'white' 
-                                        : 'rgba(255, 255, 255, 0.1)',
-                                      boxShadow: hoveredColor === color.value 
-                                        ? `0 0 20px ${color.value}33` 
-                                        : 'none'
+                      <div className="p-4">
+                        <Tabs defaultValue="picker" value={selectedTab} onValueChange={setSelectedTab}>
+                          <TabsList className="grid w-full grid-cols-2 bg-slate-800/50">
+                            <TabsTrigger value="picker" className="text-white data-[state=active]:bg-slate-700">
+                              Color Picker
+                            </TabsTrigger>
+                            <TabsTrigger value="presets" className="text-white data-[state=active]:bg-slate-700">
+                              Presets
+                            </TabsTrigger>
+                          </TabsList>
+                          <div className="mt-4">
+                            <TabsContent value="picker" className="mt-0">
+                              <div className="space-y-4">
+                                <div>
+                                  <Label className="text-white mb-2 block font-medium">Hue</Label>
+                                  <div className="h-4 rounded-lg mb-2" style={{
+                                    background: `linear-gradient(to right, ${hueGradient.join(', ')})`
+                                  }} />
+                                  <Slider
+                                    value={[hue]}
+                                    min={0}
+                                    max={360}
+                                    step={1}
+                                    onValueChange={(value) => {
+                                      setHue(value[0]);
+                                      updateFromHSL();
                                     }}
-                                    onClick={() => updateConfig({ customBackgroundColor: color.value })}
-                                    onPointerEnter={() => setHoveredColor(color.value)}
-                                    onPointerLeave={() => setHoveredColor(null)}
-                                  >
-                                    <div 
-                                      className="absolute inset-0 transition-opacity duration-200"
+                                    className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-white mb-2 block font-medium">Saturation</Label>
+                                  <div className="h-4 rounded-lg mb-2" style={{
+                                    background: `linear-gradient(to right, 
+                                      hsl(${hue}, 0%, ${lightness}%), 
+                                      hsl(${hue}, 100%, ${lightness}%))`
+                                  }} />
+                                  <Slider
+                                    value={[saturation]}
+                                    min={0}
+                                    max={100}
+                                    step={1}
+                                    onValueChange={(value) => {
+                                      setSaturation(value[0]);
+                                      updateFromHSL();
+                                    }}
+                                    className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-white mb-2 block font-medium">Lightness</Label>
+                                  <div className="h-4 rounded-lg mb-2" style={{
+                                    background: `linear-gradient(to right, 
+                                      hsl(${hue}, ${saturation}%, 0%), 
+                                      hsl(${hue}, ${saturation}%, 100%))`
+                                  }} />
+                                  <Slider
+                                    value={[lightness]}
+                                    min={0}
+                                    max={100}
+                                    step={1}
+                                    onValueChange={(value) => {
+                                      setLightness(value[0]);
+                                      updateFromHSL();
+                                    }}
+                                    className="[&_[role=slider]]:bg-white [&_[role=slider]]:border-2 [&_[role=slider]]:border-white/50 [&>.relative>div:first-child]:bg-white [&>.relative>div:last-child]:bg-transparent"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-white block font-medium">Weather Widget Preview</Label>
+                                  <WeatherWidgetPreview color={hslToHex(hue, saturation, lightness)} />
+                                </div>
+                              </div>
+                            </TabsContent>
+                            <TabsContent value="presets" className="mt-0">
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-3 gap-3">
+                                  {colorPresets.map((color) => (
+                                    <Button
+                                      key={color.value}
+                                      variant="outline"
+                                      className="relative group p-0 h-12 border-2 rounded-lg overflow-hidden transition-all duration-200"
                                       style={{
-                                        backgroundColor: hoveredColor === color.value 
-                                          ? `${color.value}33`
-                                          : 'transparent'
+                                        backgroundColor: color.value,
+                                        borderColor: config.customBackgroundColor === color.value 
+                                          ? 'white' 
+                                          : 'rgba(255, 255, 255, 0.1)',
+                                        boxShadow: hoveredColor === color.value 
+                                          ? `0 0 20px ${color.value}33` 
+                                          : 'none'
                                       }}
-                                    />
-                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <span 
-                                        className="text-white text-xs font-medium px-2 py-1 rounded-full"
+                                      onClick={() => updateConfig({ customBackgroundColor: color.value })}
+                                      onPointerEnter={() => setHoveredColor(color.value)}
+                                      onPointerLeave={() => setHoveredColor(null)}
+                                    >
+                                      <div 
+                                        className="absolute inset-0 transition-opacity duration-200"
                                         style={{
                                           backgroundColor: hoveredColor === color.value 
-                                            ? `${color.value}99`
-                                            : 'rgba(0, 0, 0, 0.4)'
+                                            ? `${color.value}33`
+                                            : 'transparent'
                                         }}
-                                      >
-                                        {color.name}
-                                      </span>
-                                    </div>
-                                  </Button>
-                                ))}
+                                      />
+                                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <span 
+                                          className="text-white text-xs font-medium px-2 py-1 rounded-full"
+                                          style={{
+                                            backgroundColor: hoveredColor === color.value 
+                                              ? `${color.value}99`
+                                              : 'rgba(0, 0, 0, 0.4)'
+                                          }}
+                                        >
+                                          {color.name}
+                                        </span>
+                                      </div>
+                                    </Button>
+                                  ))}
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-white block font-medium">Weather Widget Preview</Label>
+                                  <WeatherWidgetPreview color={config.customBackgroundColor ?? '#1e3a8a'} />
+                                </div>
                               </div>
-                              <div className="space-y-2">
-                                <Label className="text-white block font-medium">Live Weather Preview</Label>
-                                <WeatherWidgetPreview color={config.customBackgroundColor ?? '#1e3a8a'} />
-                              </div>
-                            </div>
-                          </TabsContent>
+                            </TabsContent>
+                          </div>
+                        </Tabs>
+                        <div className="mt-4 pt-3 border-t border-white/10">
+                          <Button
+                            className="w-full bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() => setColorPickerOpen(false)}
+                          >
+                            Save
+                          </Button>
                         </div>
-                      </Tabs>
-                      <div className="mt-4 pt-3 border-t border-white/10">
-                        <p className="text-xs text-blue-200">
-                          Preview shows live weather data from your current location
-                        </p>
                       </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
             </div>
           )}
