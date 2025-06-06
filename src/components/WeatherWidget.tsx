@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Thermometer, Droplets, Wind, Eye, Gauge, Sun, Cloud, CloudRain, CloudSnow, Zap, RefreshCw, Clock, Calendar, Palette } from 'lucide-react';
 import { getWeatherData } from '../services/weather';
