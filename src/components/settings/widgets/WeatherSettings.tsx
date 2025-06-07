@@ -539,44 +539,24 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
 
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-white">Show Wind Speed</Label>
-              <p className="text-sm text-gray-300">Display wind speed information</p>
+              <Label className="text-white">Show Advanced Info</Label>
+              <p className="text-sm text-gray-300">Display humidity, wind and sunset time</p>
             </div>
             <Switch
-              checked={config.showWind ?? true}
-              onCheckedChange={(checked) => updateConfig({ showWind: checked })}
+              checked={config.showAdvancedInfo ?? true}
+              onCheckedChange={(checked) => updateConfig({ showAdvancedInfo: checked })}
             />
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-white">Show Humidity</Label>
-              <p className="text-sm text-gray-300">Display humidity percentage</p>
+              <Label className="text-white">Show Forecast Info</Label>
+              <p className="text-sm text-gray-300">Display forecast information</p>
             </div>
             <Switch
-              checked={config.showHumidity ?? true}
-              onCheckedChange={(checked) => updateConfig({ showHumidity: checked })}
+              checked={config.showForecastInfo ?? true}
+              onCheckedChange={(checked) => updateConfig({ showForecastInfo: checked })}
             />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-white">Extended Forecast Days</Label>
-              <p className="text-sm text-gray-300">Number of days to show in forecast</p>
-            </div>
-            <Select
-              value={String(config.forecastDays ?? 5)}
-              onValueChange={(value) => updateConfig({ forecastDays: Number(value) })}
-            >
-              <SelectTrigger className="w-[180px] bg-white/10 border-white/20 text-white">
-                <SelectValue placeholder="Select days" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="3">3 Days</SelectItem>
-                <SelectItem value="5">5 Days</SelectItem>
-                <SelectItem value="7">7 Days</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </CardContent>
       </Card>

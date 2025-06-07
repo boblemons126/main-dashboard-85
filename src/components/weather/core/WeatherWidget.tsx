@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { RefreshCw, Palette } from 'lucide-react';
-import { useWeatherData } from '../../hooks/useWeatherData';
-import { useLocationContext } from '../../contexts/LocationContext';
+import { useWeatherData } from '@/hooks/useWeatherData';
+import { useLocationContext } from '@/contexts/LocationContext';
 import { useSettings } from '@/contexts/SettingsContext';
+import { getGradientByCondition } from '@/utils/weatherUtils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
 import WeatherHeader from './WeatherHeader';
 import CurrentWeather from './CurrentWeather';
 import WeatherDetails from './WeatherDetails';
-import ForecastToggle from './ForecastToggle';
-import WeatherForecast from './WeatherForecast';
-import { getGradientByCondition } from '../../utils/weatherUtils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
-import CustomColorPicker from './CustomColorPicker';
+import ForecastToggle from '../forecast/ForecastToggle';
+import WeatherForecast from '../forecast/WeatherForecast';
+import CustomColorPicker from '../customization/CustomColorPicker';
 
 const colorPresets = [
   { name: 'Blue', value: '#1e3a8a' },
@@ -185,4 +185,4 @@ const WeatherWidget = () => {
   );
 };
 
-export default WeatherWidget;
+export default WeatherWidget; 
