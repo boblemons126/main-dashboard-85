@@ -1,4 +1,3 @@
-
 interface LocationResult {
   name: string;
   latitude: number;
@@ -8,6 +7,7 @@ interface LocationResult {
   type: 'city' | 'town' | 'postcode' | 'county' | 'district';
   postcode?: string;
   importance?: number;
+  matchScore?: number;
 }
 
 const OPENWEATHER_API_KEY = '31fcb172502b94e6534cc6bc72352259';
@@ -15,6 +15,15 @@ const OPENWEATHER_API_KEY = '31fcb172502b94e6534cc6bc72352259';
 // Cache for instant results
 const searchCache = new Map<string, { results: LocationResult[], timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Priority weights for location types
+const TYPE_PRIORITY = {
+  'town': 5,
+  'city': 4,
+  'county': 3,
+  'postcode': 2,
+  'district': 1
+};
 
 export const searchLocations = async (query: string, limit = 8): Promise<LocationResult[]> => {
   if (!query || query.trim().length < 1) return [];
@@ -30,18 +39,25 @@ export const searchLocations = async (query: string, limit = 8): Promise<Locatio
 
   try {
     // Use Nominatim as primary for better UK support
-    const nominatimResults = await searchWithNominatim(cleanQuery, limit);
+    const nominatimResults = await searchWithNominatim(cleanQuery, limit * 2);
+    
+    // Apply flexible matching and scoring
+    const scoredResults = scoreAndFilterResults(nominatimResults, cleanQuery);
     
     // If Nominatim gives good results, use them
-    if (nominatimResults.length > 0) {
-      searchCache.set(cacheKey, { results: nominatimResults, timestamp: Date.now() });
-      return nominatimResults;
+    if (scoredResults.length > 0) {
+      const finalResults = scoredResults.slice(0, limit);
+      searchCache.set(cacheKey, { results: finalResults, timestamp: Date.now() });
+      return finalResults;
     }
     
     // Fallback to OpenWeather
     const openWeatherResults = await searchWithOpenWeather(cleanQuery, limit);
-    searchCache.set(cacheKey, { results: openWeatherResults, timestamp: Date.now() });
-    return openWeatherResults;
+    const scoredOpenWeatherResults = scoreAndFilterResults(openWeatherResults, cleanQuery);
+    const finalResults = scoredOpenWeatherResults.slice(0, limit);
+    
+    searchCache.set(cacheKey, { results: finalResults, timestamp: Date.now() });
+    return finalResults;
     
   } catch (error) {
     console.error('Location search error:', error);
@@ -53,6 +69,111 @@ export const searchLocations = async (query: string, limit = 8): Promise<Locatio
     
     return [];
   }
+};
+
+const scoreAndFilterResults = (results: LocationResult[], query: string): LocationResult[] => {
+  const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 0);
+  
+  return results
+    .map(result => ({
+      ...result,
+      matchScore: calculateMatchScore(result, queryWords)
+    }))
+    .filter(result => result.matchScore! > 0)
+    .sort((a, b) => {
+      // First sort by type priority
+      const priorityDiff = (TYPE_PRIORITY[b.type] || 0) - (TYPE_PRIORITY[a.type] || 0);
+      if (priorityDiff !== 0) return priorityDiff;
+      
+      // Then by match score
+      const scoreDiff = (b.matchScore || 0) - (a.matchScore || 0);
+      if (scoreDiff !== 0) return scoreDiff;
+      
+      // Finally by importance
+      return (b.importance || 0) - (a.importance || 0);
+    });
+};
+
+const calculateMatchScore = (result: LocationResult, queryWords: string[]): number => {
+  const resultText = result.name.toLowerCase();
+  const resultWords = resultText.split(/[\s,]+/).filter(word => word.length > 0);
+  
+  let score = 0;
+  let matchedWords = 0;
+  
+  for (const queryWord of queryWords) {
+    let bestWordScore = 0;
+    
+    for (const resultWord of resultWords) {
+      if (resultWord === queryWord) {
+        // Exact word match
+        bestWordScore = Math.max(bestWordScore, 10);
+      } else if (resultWord.startsWith(queryWord)) {
+        // Prefix match
+        bestWordScore = Math.max(bestWordScore, 8);
+      } else if (resultWord.includes(queryWord)) {
+        // Substring match
+        bestWordScore = Math.max(bestWordScore, 5);
+      } else if (queryWord.length >= 3) {
+        // Fuzzy match for longer words
+        const similarity = calculateSimilarity(queryWord, resultWord);
+        if (similarity > 0.6) {
+          bestWordScore = Math.max(bestWordScore, Math.floor(similarity * 3));
+        }
+      }
+    }
+    
+    if (bestWordScore > 0) {
+      matchedWords++;
+      score += bestWordScore;
+    }
+  }
+  
+  // Bonus for matching all query words
+  if (matchedWords === queryWords.length) {
+    score += 5;
+  }
+  
+  // Penalty for unmatched query words
+  const unmatchedWords = queryWords.length - matchedWords;
+  score -= unmatchedWords * 3;
+  
+  return Math.max(0, score);
+};
+
+const calculateSimilarity = (str1: string, str2: string): number => {
+  const longer = str1.length > str2.length ? str1 : str2;
+  const shorter = str1.length > str2.length ? str2 : str1;
+  
+  if (longer.length === 0) return 1;
+  
+  const editDistance = levenshteinDistance(longer, shorter);
+  return (longer.length - editDistance) / longer.length;
+};
+
+const levenshteinDistance = (str1: string, str2: string): number => {
+  const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+  
+  for (let i = 0; i <= str1.length; i++) {
+    matrix[0][i] = i;
+  }
+  
+  for (let j = 0; j <= str2.length; j++) {
+    matrix[j][0] = j;
+  }
+  
+  for (let j = 1; j <= str2.length; j++) {
+    for (let i = 1; i <= str1.length; i++) {
+      const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+      matrix[j][i] = Math.min(
+        matrix[j][i - 1] + 1,
+        matrix[j - 1][i] + 1,
+        matrix[j - 1][i - 1] + indicator
+      );
+    }
+  }
+  
+  return matrix[str2.length][str1.length];
 };
 
 const searchWithNominatim = async (query: string, limit: number): Promise<LocationResult[]> => {
@@ -75,7 +196,7 @@ const searchWithNominatim = async (query: string, limit: number): Promise<Locati
     type: determineNominatimType(item),
     postcode: item.address?.postcode,
     importance: item.importance || 0
-  })).sort((a: LocationResult, b: LocationResult) => (b.importance || 0) - (a.importance || 0));
+  }));
 };
 
 const searchWithOpenWeather = async (query: string, limit: number): Promise<LocationResult[]> => {

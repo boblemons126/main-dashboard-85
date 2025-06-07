@@ -15,6 +15,7 @@ interface LocationResult {
   type: 'city' | 'town' | 'postcode' | 'county' | 'district';
   postcode?: string;
   importance?: number;
+  matchScore?: number;
 }
 
 const LocationSearchInput: React.FC = () => {
@@ -23,10 +24,12 @@ const LocationSearchInput: React.FC = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   
   const { addCustomLocation } = useLocationContext();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -36,7 +39,7 @@ const LocationSearchInput: React.FC = () => {
     }
   }, []);
 
-  // Instant search - no debouncing
+  // Instant search with minimal debouncing for API calls
   useEffect(() => {
     const performSearch = async () => {
       const trimmedQuery = searchQuery.trim();
@@ -44,11 +47,20 @@ const LocationSearchInput: React.FC = () => {
       if (trimmedQuery.length === 0) {
         setSuggestions([]);
         setShowSuggestions(false);
+        setIsSearching(false);
         return;
       }
 
+      if (trimmedQuery.length < 2) {
+        setShowSuggestions(true);
+        setIsSearching(false);
+        return;
+      }
+
+      setIsSearching(true);
+
       try {
-        const results = await searchLocations(trimmedQuery, 8);
+        const results = await searchLocations(trimmedQuery, 10);
         setSuggestions(results);
         setShowSuggestions(true);
         setSelectedIndex(-1);
@@ -56,10 +68,28 @@ const LocationSearchInput: React.FC = () => {
         console.error('Search error:', error);
         setSuggestions([]);
         setShowSuggestions(true);
+      } finally {
+        setIsSearching(false);
       }
     };
 
-    performSearch();
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Only add minimal delay for API calls (150ms)
+    if (searchQuery.trim().length >= 2) {
+      searchTimeoutRef.current = setTimeout(performSearch, 150);
+    } else {
+      performSearch();
+    }
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
   }, [searchQuery]);
 
   // Close suggestions when clicking outside
@@ -83,7 +113,7 @@ const LocationSearchInput: React.FC = () => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!showSuggestions) return;
 
-    const totalSuggestions = suggestions.length + (searchQuery.length > 0 && recentSearches.length > 0 ? recentSearches.length : 0);
+    const totalSuggestions = suggestions.length + (searchQuery.length === 0 && recentSearches.length > 0 ? recentSearches.length : 0);
     
     if (totalSuggestions === 0) return;
 
@@ -115,6 +145,11 @@ const LocationSearchInput: React.FC = () => {
   };
 
   const handleSelectLocation = (location: LocationResult) => {
+    // Only allow towns and cities (filter out counties, postcodes, districts)
+    if (location.type !== 'town' && location.type !== 'city') {
+      return;
+    }
+
     addCustomLocation({
       name: location.name,
       latitude: location.latitude,
@@ -163,26 +198,32 @@ const LocationSearchInput: React.FC = () => {
     return colorMap[type as keyof typeof colorMap] || 'bg-gray-500/15 text-gray-300 border-gray-500/30';
   };
 
+  const canSelectLocation = (location: LocationResult) => {
+    return location.type === 'town' || location.type === 'city';
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-3">
         <div className="flex items-center space-x-2">
           <Navigation className="w-5 h-5 text-blue-400" />
-          <h3 className="text-lg font-semibold text-white">Add Custom Location</h3>
+          <h3 className="text-lg font-semibold text-white">Add Towns & Cities</h3>
         </div>
         <p className="text-gray-300 text-sm leading-relaxed">
-          Search for any UK location by postcode, town, city, or county. Results appear instantly as you type.
+          Search for UK towns and cities by name, partial name, or postcode. Only towns and cities can be added to your weather locations.
         </p>
       </div>
       
       <div className="relative">
         <div className="relative group">
           <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10">
-            <Search className="w-5 h-5 text-gray-400 group-focus-within:text-blue-400 transition-colors duration-200" />
+            <Search className={`w-5 h-5 transition-colors duration-200 ${
+              isSearching ? 'text-blue-400 animate-pulse' : 'text-gray-400 group-focus-within:text-blue-400'
+            }`} />
           </div>
           <Input
             ref={searchInputRef}
-            placeholder="Try 'SW1A 1AA', 'London', 'Cornwall', or 'Manchester'..."
+            placeholder="Try 'Falmouth', 'Cornwall Falmouth', 'SW11 2AA', or 'Manchester'..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -223,56 +264,82 @@ const LocationSearchInput: React.FC = () => {
                   <div className="p-2">
                     <div className="text-xs text-gray-400 px-3 py-2 flex items-center space-x-2">
                       <Search className="w-3 h-3" />
-                      <span>Search results for "{searchQuery}"</span>
+                      <span>Search results for "{searchQuery}" (Towns & Cities only)</span>
                     </div>
                     <div className="space-y-1 max-h-64 overflow-y-auto">
-                      {suggestions.map((location, index) => (
-                        <button
-                          key={`${location.latitude}-${location.longitude}-${index}`}
-                          className={`w-full p-3 text-left hover:bg-slate-700/60 transition-all duration-150 
-                                   rounded-lg group relative ${
-                                   selectedIndex === index ? 'bg-slate-700/60 ring-1 ring-blue-500/30' : ''
-                                 }`}
-                          onClick={() => handleSelectLocation(location)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className="flex-shrink-0">
-                              <span className="text-xl">{getLocationTypeIcon(location.type)}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-white text-sm group-hover:text-blue-200 transition-colors">
-                                {location.name}
+                      {suggestions.map((location, index) => {
+                        const canSelect = canSelectLocation(location);
+                        return (
+                          <button
+                            key={`${location.latitude}-${location.longitude}-${index}`}
+                            className={`w-full p-3 text-left transition-all duration-150 
+                                     rounded-lg group relative ${
+                                     selectedIndex === index ? 'bg-slate-700/60 ring-1 ring-blue-500/30' : ''
+                                   } ${
+                                     canSelect 
+                                       ? 'hover:bg-slate-700/60 cursor-pointer' 
+                                       : 'opacity-50 cursor-not-allowed hover:bg-slate-700/30'
+                                   }`}
+                            onClick={() => canSelect && handleSelectLocation(location)}
+                            disabled={!canSelect}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className="flex-shrink-0">
+                                <span className="text-xl">{getLocationTypeIcon(location.type)}</span>
                               </div>
-                              <div className="flex items-center space-x-2 mt-1.5">
-                                <span className={`px-2.5 py-1 rounded-md text-xs border font-medium ${getLocationTypeBadge(location.type)}`}>
-                                  {location.type}
-                                </span>
-                                {location.postcode && (
-                                  <span className="text-xs text-gray-400 bg-slate-700/40 px-2 py-1 rounded border border-slate-600/30">
-                                    {location.postcode}
+                              <div className="flex-1 min-w-0">
+                                <div className={`font-medium text-sm transition-colors ${
+                                  canSelect 
+                                    ? 'text-white group-hover:text-blue-200' 
+                                    : 'text-gray-400'
+                                }`}>
+                                  {location.name}
+                                </div>
+                                <div className="flex items-center space-x-2 mt-1.5">
+                                  <span className={`px-2.5 py-1 rounded-md text-xs border font-medium ${getLocationTypeBadge(location.type)}`}>
+                                    {location.type}
                                   </span>
-                                )}
+                                  {location.postcode && (
+                                    <span className="text-xs text-gray-400 bg-slate-700/40 px-2 py-1 rounded border border-slate-600/30">
+                                      {location.postcode}
+                                    </span>
+                                  )}
+                                  {!canSelect && (
+                                    <span className="text-xs text-red-400 bg-red-500/10 px-2 py-1 rounded border border-red-500/20">
+                                      Not available
+                                    </span>
+                                  )}
+                                </div>
                               </div>
+                              {canSelect && (
+                                <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Plus className="w-5 h-5 text-green-400" />
+                                </div>
+                              )}
                             </div>
-                            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Plus className="w-5 h-5 text-green-400" />
-                            </div>
-                          </div>
-                        </button>
-                      ))}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
-                ) : (
+                ) : searchQuery.trim().length >= 2 && !isSearching ? (
                   <div className="p-6 text-center">
                     <div className="flex flex-col items-center space-y-3 text-gray-400">
                       <MapPin className="w-8 h-8" />
-                      <div className="text-sm font-medium">No locations found</div>
+                      <div className="text-sm font-medium">No towns or cities found</div>
                       <div className="text-xs text-gray-500 max-w-xs">
-                        Try searching for a postcode (e.g., SW1A 1AA), town, city, or county in the UK
+                        Try searching for a different town, city, or postcode in the UK
                       </div>
                     </div>
                   </div>
-                )}
+                ) : searchQuery.trim().length >= 2 && isSearching ? (
+                  <div className="p-6 text-center">
+                    <div className="flex flex-col items-center space-y-3 text-gray-400">
+                      <Search className="w-8 h-8 animate-pulse" />
+                      <div className="text-sm font-medium">Searching...</div>
+                    </div>
+                  </div>
+                ) : null}
               </>
             )}
             
