@@ -12,9 +12,7 @@ import { Slider } from '@/components/ui/slider';
 import { useWeatherData } from '@/hooks/useWeatherData';
 import { getWeatherIcon } from '@/utils/weatherUtils';
 import CustomLocationsList from './CustomLocationsList';
-import { Input } from '@/components/ui/input';
-import { useLocationContext } from '@/contexts/LocationContext';
-import { geocodeLocation, searchLocations } from '@/services/openWeatherService';
+import LocationSearchInput from './LocationSearchInput';
 
 // Expanded color presets with more shades
 const colorPresets = [
@@ -524,17 +522,9 @@ const WeatherSettings: React.FC<WeatherSettingsProps> = ({ onSettingsChange }) =
             />
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-white/10">
-            <div>
-              <Label className="text-white text-base font-medium mb-2 block">Custom Locations</Label>
-              <p className="text-sm text-gray-300 mb-4">
-                Manage your saved custom locations.
-              </p>
-            </div>
-            
-            <div className="pt-2">
-              <CustomLocationsList />
-            </div>
+          <div className="space-y-6 pt-4 border-t border-white/10">
+            <LocationSearchInput />
+            <CustomLocationsList />
           </div>
         </CardContent>
       </Card>
