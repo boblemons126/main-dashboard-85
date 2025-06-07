@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MapPin, Trash2, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,7 @@ const CustomLocationsList: React.FC = () => {
       <div className="text-center py-8 bg-white/5 rounded-lg border border-white/10">
         <MapPin className="w-8 h-8 mx-auto text-gray-500 mb-3" />
         <p className="text-sm text-gray-300 font-medium mb-1">No custom locations added</p>
-        <p className="text-xs text-gray-500">Search and add locations above to get started</p>
+        <p className="text-xs text-gray-500">There are no custom locations to display.</p>
       </div>
     );
   }
@@ -49,8 +48,10 @@ const CustomLocationsList: React.FC = () => {
               }`}>
                 {location.name}
               </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+              <div className="text-xs text-gray-400 mt-1">
+                <span className="inline-block bg-white/5 border border-white/10 px-2 py-0.5 rounded-md">
+                  {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                </span>
               </div>
             </div>
             {selectedLocationId === location.id && (

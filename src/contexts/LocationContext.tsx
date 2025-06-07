@@ -5,6 +5,7 @@ export interface CustomLocation {
   name: string;
   latitude: number;
   longitude: number;
+  postcode?: string;
 }
 
 interface LocationContextType {
