@@ -38,10 +38,10 @@ export const searchLocations = async (query: string, limit = 8): Promise<Locatio
   }
 
   try {
-    // Use Nominatim as primary for better UK support
-    const nominatimResults = await searchWithNominatim(cleanQuery, limit * 2);
+    // Use Nominatim as primary for better UK support with stricter UK filtering
+    const nominatimResults = await searchWithNominatim(cleanQuery, limit * 3);
     
-    // Apply flexible matching and scoring
+    // Apply flexible matching and scoring with UK priority
     const scoredResults = scoreAndFilterResults(nominatimResults, cleanQuery);
     
     // If Nominatim gives good results, use them
@@ -51,7 +51,7 @@ export const searchLocations = async (query: string, limit = 8): Promise<Locatio
       return finalResults;
     }
     
-    // Fallback to OpenWeather
+    // Fallback to OpenWeather with UK filtering
     const openWeatherResults = await searchWithOpenWeather(cleanQuery, limit);
     const scoredOpenWeatherResults = scoreAndFilterResults(openWeatherResults, cleanQuery);
     const finalResults = scoredOpenWeatherResults.slice(0, limit);
@@ -75,13 +75,25 @@ const scoreAndFilterResults = (results: LocationResult[], query: string): Locati
   const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 0);
   
   return results
+    // First filter out non-UK locations more strictly
+    .filter(result => {
+      // Only allow GB/UK locations or locations without country specified (assume UK from Nominatim)
+      return !result.country || result.country === 'GB' || result.country === 'UK';
+    })
     .map(result => ({
       ...result,
       matchScore: calculateMatchScore(result, queryWords)
     }))
     .filter(result => result.matchScore! > 0)
     .sort((a, b) => {
-      // First sort by type priority
+      // First prioritize UK locations
+      const aIsUK = !a.country || a.country === 'GB' || a.country === 'UK';
+      const bIsUK = !b.country || b.country === 'GB' || b.country === 'UK';
+      
+      if (aIsUK && !bIsUK) return -1;
+      if (!aIsUK && bIsUK) return 1;
+      
+      // Then sort by type priority
       const priorityDiff = (TYPE_PRIORITY[b.type] || 0) - (TYPE_PRIORITY[a.type] || 0);
       if (priorityDiff !== 0) return priorityDiff;
       
@@ -106,19 +118,22 @@ const calculateMatchScore = (result: LocationResult, queryWords: string[]): numb
     
     for (const resultWord of resultWords) {
       if (resultWord === queryWord) {
-        // Exact word match
-        bestWordScore = Math.max(bestWordScore, 10);
+        // Exact word match - highest score
+        bestWordScore = Math.max(bestWordScore, 15);
       } else if (resultWord.startsWith(queryWord)) {
-        // Prefix match
+        // Prefix match - high score
+        bestWordScore = Math.max(bestWordScore, 12);
+      } else if (queryWord.length >= 3 && resultWord.startsWith(queryWord.substring(0, 3))) {
+        // First 3 characters match - good score
         bestWordScore = Math.max(bestWordScore, 8);
       } else if (resultWord.includes(queryWord)) {
-        // Substring match
+        // Substring match - medium score
         bestWordScore = Math.max(bestWordScore, 5);
-      } else if (queryWord.length >= 3) {
-        // Fuzzy match for longer words
+      } else if (queryWord.length >= 4) {
+        // More strict fuzzy match for longer words
         const similarity = calculateSimilarity(queryWord, resultWord);
-        if (similarity > 0.6) {
-          bestWordScore = Math.max(bestWordScore, Math.floor(similarity * 3));
+        if (similarity > 0.75) { // Increased threshold
+          bestWordScore = Math.max(bestWordScore, Math.floor(similarity * 4));
         }
       }
     }
@@ -131,12 +146,12 @@ const calculateMatchScore = (result: LocationResult, queryWords: string[]): numb
   
   // Bonus for matching all query words
   if (matchedWords === queryWords.length) {
-    score += 5;
+    score += 10; // Increased bonus
   }
   
   // Penalty for unmatched query words
   const unmatchedWords = queryWords.length - matchedWords;
-  score -= unmatchedWords * 3;
+  score -= unmatchedWords * 5; // Increased penalty
   
   return Math.max(0, score);
 };
@@ -177,8 +192,9 @@ const levenshteinDistance = (str1: string, str2: string): number => {
 };
 
 const searchWithNominatim = async (query: string, limit: number): Promise<LocationResult[]> => {
+  // Add more specific UK filtering and better parameters
   const response = await fetch(
-    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=${limit}&countrycodes=gb&addressdetails=1&extratags=1`
+    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=${limit}&countrycodes=gb&addressdetails=1&extratags=1&bounded=1&viewbox=-10.76,49.14,2.78,60.85`
   );
   
   if (!response.ok) {
@@ -187,21 +203,31 @@ const searchWithNominatim = async (query: string, limit: number): Promise<Locati
   
   const data = await response.json();
   
-  return data.map((item: any) => ({
-    name: formatNominatimName(item),
-    latitude: parseFloat(item.lat),
-    longitude: parseFloat(item.lon),
-    country: 'GB',
-    state: item.address?.county || item.address?.state,
-    type: determineNominatimType(item),
-    postcode: item.address?.postcode,
-    importance: item.importance || 0
-  }));
+  return data
+    .filter((item: any) => {
+      // Additional filtering to ensure UK locations
+      const address = item.address || {};
+      return address.country_code === 'gb' || 
+             address.country === 'United Kingdom' || 
+             address.country === 'UK';
+    })
+    .map((item: any) => ({
+      name: formatNominatimName(item),
+      latitude: parseFloat(item.lat),
+      longitude: parseFloat(item.lon),
+      country: 'GB',
+      state: item.address?.county || item.address?.state,
+      type: determineNominatimType(item),
+      postcode: item.address?.postcode,
+      importance: item.importance || 0
+    }));
 };
 
 const searchWithOpenWeather = async (query: string, limit: number): Promise<LocationResult[]> => {
+  // Add UK country code to the query for better filtering
+  const ukQuery = `${query},GB`;
   const response = await fetch(
-    `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=${limit}&appid=${OPENWEATHER_API_KEY}`
+    `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(ukQuery)}&limit=${limit}&appid=${OPENWEATHER_API_KEY}`
   );
   
   if (!response.ok) {
@@ -210,15 +236,17 @@ const searchWithOpenWeather = async (query: string, limit: number): Promise<Loca
   
   const data = await response.json();
   
-  return data.map((item: any) => ({
-    name: formatOpenWeatherName(item),
-    latitude: item.lat,
-    longitude: item.lon,
-    country: item.country,
-    state: item.state,
-    type: determineOpenWeatherType(item, query),
-    postcode: undefined
-  }));
+  return data
+    .filter((item: any) => item.country === 'GB') // Strict UK filtering
+    .map((item: any) => ({
+      name: formatOpenWeatherName(item),
+      latitude: item.lat,
+      longitude: item.lon,
+      country: item.country,
+      state: item.state,
+      type: determineOpenWeatherType(item, query),
+      postcode: undefined
+    }));
 };
 
 const formatNominatimName = (item: any): string => {
